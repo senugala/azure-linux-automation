@@ -637,6 +637,7 @@
 					<VirtualMachine>
 						<state></state>
 						<InstanceSize>Large</InstanceSize>
+						<ARMInstanceSize>Standard_D3_v2</ARMInstanceSize>
 						<EndPoints>
 							<Name>SSH</Name>
 							<Protocol>tcp</Protocol>
@@ -6465,17 +6466,16 @@
 		<test>
 			<testName>XSMB-XFS-TEST</testName>
 			<testScript>XSMB-XFS-TEST.py</testScript>
-			<testScriptps1>XSMB-XFS-TEST.ps1</testScriptps1>
-			<files>.\remote-scripts\azuremodules.py,.\remote-scripts\XSMB-XFS-TEST.py,.\remote-scripts\GetXsmbXfsTestStatus.sh,.\remote-scripts\Packages\xfstests.tar,.\remote-scripts\Packages\xfsprogs.tar</files>
+			<testScriptps1>XSMB-XFS-TEST1.ps1</testScriptps1>
+			<files>.\remote-scripts\azuremodules.py,.\remote-scripts\XSMB-XFS-TEST.py,.\remote-scripts\GetXsmbXfsTestStatus.sh</files>
 			<setupType>xSMBVM</setupType>
 			<TestType></TestType>
 			<TestFeature></TestFeature>
-			<SupportedExecutionModes>AzureServiceManagement</SupportedExecutionModes>
+			<SupportedExecutionModes>AzureServiceManagement,AzureResourceManager</SupportedExecutionModes>
 			<TestID></TestID>
 			<SubtestValues></SubtestValues>
-			<MountPoint>'/azureshare'</MountPoint>
-			<AzureShareUrl>'//ostcsmbtest.file.core.windows.net/sirebbshare'</AzureShareUrl>
-			<AccessKey>'bh1ViaUop7GLs51246E9WHg9y7goc1Y+IXMBxJfj379GQLe4Ha81gdlL9zBZQt7QdeuFb+076tIO7wuFVoQNog=='</AccessKey>
+			<MountPoint>'/myazureshare'</MountPoint>
+			<AzureShareUrl>'//'xsmbforcifs.file.core.windows.net/sirebbshare'</AzureShareUrl>
 			<Priority>P0</Priority>
 		</test>
 		

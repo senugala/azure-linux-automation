@@ -48,35 +48,39 @@ def set_variables_OS_dependent():
 		Run("echo XFS_TEST_ABORTED > xfstest.log");
 		exit()
 
-	packages_list = ["make", "libuuid-devel", "libattr-devel", "libacl-devel", "libaio-devel", "gettext-tools", "gettext", "gcc", "libtool", "automake", "bc"]
+	packages_list = ["make", "xfslibs-dev", "uuid-dev", "libtool-bin", "libuuid-devel", "libattr-devel", "libacl-devel", "libaio-devel", "gettext-tools", "gettext", "gcc", "libtool", "automake", "bc"]
 	if (current_distro == "ubuntu"):
-		packages_list = ["make", "uuid-dev", "libattr1-dev", "libacl1-dev", "libattr1-dev", "libaio-dev", "gettext", "gcc", "libtool", "automake", "bc"]
+		packages_list = ["make","git", "xfslibs-dev", "libtool-bin", "uuid-dev", "libuuid-devel","libattr1-dev", "libacl1-dev", "libattr1-dev", "libaio-dev", "gettext", "gcc", "libtool", "automake", "bc"]
 
 	RunLog.info( "set_variables_OS_dependent .. [done]")
 
 install_shell_script = """
-tar -xvf xfstests.tar
+git clone git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git
 if [ "$?" != 0 ]
 then
-	echo "FAILED: to extract xfstests.tar "
+	echo "FAILED: to extract xfstests "
 	exit 1
 fi
 
-tar -xvf xfsprogs.tar
+git clone git://git.kernel.org/pub/scm/fs/xfs/xfsprogs-dev.git
 if [ "$?" != 0 ]
 then
-	echo "FAILED: to extract xfsprogs.tar "
+	echo "FAILED: to extract xfstests "
 	exit 1
 fi
-echo "xfstests.tar  xfsprogs.tar extracted succesfully!"
+
+echo "xfstests  xfsprogs extracted succesfully!"
 echo "Compiling xfsprogs..."
+mv xfsprogs-dev xfsprogs
 cd xfsprogs
 make
 echo "installing xfsprogs"
-make install-qa
+make install-dev
 
 echo "Compiling xfsprogs..."
-cd ../xfstests
+cd ..
+mv xfstests-dev xfstests
+cd xfstests
 ./configure
 make
 """
@@ -93,7 +97,7 @@ RunLog.info("Getting the xfstest suite.....[done]")
 local_config = """export FSTYP=cifs
 export TEST_DEV="""+azureshare+"""
 export TEST_DIR="""+azureshare_mount+"""
-export TEST_FS_MOUNT_OPTIONS='-o vers=2.1,username=ostcsmbtest,password='"""+password+"""',dir_mode=0777,file_mode=0777'
+export TEST_FS_MOUNT_OPTIONS='-o vers=2.1,osec=ntlmv2,username=xsmbforcifs,password='"""+password+"""',dir_mode=0777,file_mode=0777'
 
 """
 
@@ -105,7 +109,7 @@ RunLog.info("local.config updated!")
 patch_common_rc = """_test_mount() 
 {
 	_test_options mount
-	mount -t cifs """+azureshare+""" """+azureshare_mount+""" -o vers=2.1,username=ostcsmbtest,password='"""+password+"""',dir_mode=0777,file_mode=0777
+	mount -v -t cifs """+azureshare+""" """+azureshare_mount+""" -o vers=2.1,osec=ntlmv2,username=xsmbforcifs,password='"""+password+"""',dir_mode=0777,file_mode=0777
 }
 
 """
@@ -113,5 +117,5 @@ f = open('xfstests/common/rc', 'a')
 f.write(patch_common_rc)
 f.close()
 RunLog.info("xfstests/common/rc updated!")
-Run("mkdir "+azureshare_mount)
+#Run("mkdir "+azureshare_mount)
 ExecMultiCmdsLocalSudo(["cd xfstests", "./check -cifs generic/001 generic/002  > ../xfstest.log"])
