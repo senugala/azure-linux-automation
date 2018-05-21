@@ -4,9 +4,9 @@ $result = ""
 $testResult = ""
 $resultArr = @()
 $AzureShare=$currentTestData.AzureShareUrl
-$resourceName=$AzureShare.Split("//")[2].Split(".")[0]
-$AccessKey=(Get-AzureRmStorageAccountKey -ResourceGroupName $resourceName -Name $resourceName).value[0]
-#$AccessKey=(Get-AzureRmStorageAccountKey -ResourceGroupName $AzureShare.Split("//")[2].Split(".")[0] -Name $AzureShare.Split("//")[2].Split(".")[0]).value[0]
+$AccessKey=(Get-AzureRmStorageAccountKey -ResourceGroupName $AzureShare.Split("//")[2].Split(".")[0] -Name $AzureShare.Split("//")[2].Split(".")[0]).value[0]
+
+
 $MountPoint=$currentTestData.MountPoint
 
 $isDeployed = DeployVMS -setupType $currentTestData.setupType -Distro $Distro -xmlConfig $xmlConfig
@@ -28,10 +28,10 @@ if ($isDeployed)
 		{
 			$currentStatus = RunLinuxCmd -ip $testVMData.PublicIP -port $testVMData.SSHPort -username root -password $password -command "tail -1 runlog.txt" -runAsSudo
 			LogMsg "Current Test Staus : $currentStatus"
-			WaitFor -seconds 10
+			WaitFor -seconds 30
 		}
 		
-		WaitFor -seconds 10
+		WaitFor -seconds 20
 		$TStatus=RunLinuxCmd -username root -password $password -ip $testVMData.PublicIP -port $testVMData.SSHPort -command "cat xfstest.log" -runAsSudo -ignoreLinuxExitCode
 		
 		if(!$TStatus -imatch "FSTYP.*cifs")

@@ -75,9 +75,9 @@ mv xfsprogs-dev xfsprogs
 cd xfsprogs
 make
 echo "installing xfsprogs"
-make install-qa
+make install-dev
 
-echo "Compiling xfstests..."
+echo "Compiling xfsprogs..."
 cd ..
 mv xfstests-dev xfstests
 cd xfstests
@@ -97,7 +97,7 @@ RunLog.info("Getting the xfstest suite.....[done]")
 local_config = """export FSTYP=cifs
 export TEST_DEV="""+azureshare+"""
 export TEST_DIR="""+azureshare_mount+"""
-export TEST_FS_MOUNT_OPTIONS='-o vers=2.1,osec=ntlmv2,username=xsmbforcifs,password='"""+password+"""',dir_mode=0777,file_mode=0777'
+export TEST_FS_MOUNT_OPTIONS='-o vers=2.1,sec=ntlmv2,username=xsmbforcifs,password='"""+password+"""',dir_mode=0777,file_mode=0777'
 
 """
 
@@ -109,7 +109,7 @@ RunLog.info("local.config updated!")
 patch_common_rc = """_test_mount() 
 {
 	_test_options mount
-	mount -v -t cifs """+azureshare+""" """+azureshare_mount+""" -o vers=2.1,osec=ntlmv2,username=xsmbforcifs,password='"""+password+"""',dir_mode=0777,file_mode=0777
+	mount -v -t cifs """+azureshare+""" """+azureshare_mount+""" -o vers=2.1,sec=ntlmv2,username=xsmbforcifs,password='"""+password+"""',dir_mode=0777,file_mode=0777
 }
 
 """
