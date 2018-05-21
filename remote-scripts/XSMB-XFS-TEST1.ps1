@@ -4,9 +4,9 @@ $result = ""
 $testResult = ""
 $resultArr = @()
 $AzureShare=$currentTestData.AzureShareUrl
-$AccessKey=(Get-AzureRmStorageAccountKey -ResourceGroupName $AzureShare.Split("//")[2].Split(".")[0] -Name $AzureShare.Split("//")[2].Split(".")[0]).value[0]
-
-
+$resourceName=$AzureShare.Split("//")[2].Split(".")[0]
+$AccessKey=(Get-AzureRmStorageAccountKey -ResourceGroupName $resourceName -Name $resourceName.value[0]
+#$AccessKey=(Get-AzureRmStorageAccountKey -ResourceGroupName $AzureShare.Split("//")[2].Split(".")[0] -Name $AzureShare.Split("//")[2].Split(".")[0]).value[0]
 $MountPoint=$currentTestData.MountPoint
 
 $isDeployed = DeployVMS -setupType $currentTestData.setupType -Distro $Distro -xmlConfig $xmlConfig
