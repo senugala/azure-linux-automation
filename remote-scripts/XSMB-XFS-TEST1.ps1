@@ -19,8 +19,8 @@ if ($isDeployed)
 	
 		RemoteCopy -uploadTo $testVMData.PublicIP -port $testVMData.SSHPort -files ".\remote-scripts\azuremodules.py,.\remote-scripts\XSMB-XFS-TEST.py,.\remote-scripts\GetXsmbXfsTestStatus.sh" -username "root" -password $password -upload
 		RunLinuxCmd -ip $testVMData.PublicIP -port $testVMData.SSHPort -username "root" -password $password -command "chmod +x *.sh" -runAsSudo
-		RunLinuxCmd -ip $testVMData.PublicIP -port $testVMData.SSHPort -username "root" -password $password -command "mkdir /myazureshare" -runAsSudo
-		RunLinuxCmd -ip $testVMData.PublicIP -port $testVMData.SSHPort -username "root" -password $password -command "mount -t cifs $AzureShare /myazureshare -o vers=3.0,username=xsmbforcifs,password=$AccessKey,dir_mode=0777,file_mode=0777,sec=ntlmssp" -runAsSudo
+		RunLinuxCmd -ip $testVMData.PublicIP -port $testVMData.SSHPort -username "root" -password $password -command "mkdir $MountPoint" -runAsSudo
+		RunLinuxCmd -ip $testVMData.PublicIP -port $testVMData.SSHPort -username "root" -password $password -command "mount -t cifs $AzureShare $MountPoint -o vers=3.0,username=xsmbforcifs,password=$AccessKey,dir_mode=0777,file_mode=0777,sec=ntlmssp" -runAsSudo
 		LogMsg "Mounting Share on remote Machine"
 		#LogMsg "Executing : $($currentTestData.testScript)"
 		$testJob=RunLinuxCmd -username root -password $password -ip $testVMData.PublicIP -port $testVMData.SSHPort -command "python $($currentTestData.testScript) -p $AccessKey -s $AzureShare -m $MountPoint > /root/test.txt" -runAsSudo -runmaxallowedtime 1000 -ignoreLinuxExitCode 
