@@ -75,9 +75,9 @@ mv xfsprogs-dev xfsprogs
 cd xfsprogs
 make
 echo "installing xfsprogs"
-make install-dev
+make install-qa
 
-echo "Compiling xfsprogs..."
+echo "Compiling xfstests..."
 cd ..
 mv xfstests-dev xfstests
 cd xfstests
