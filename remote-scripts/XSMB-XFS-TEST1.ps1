@@ -5,7 +5,7 @@ $testResult = ""
 $resultArr = @()
 $AzureShare=$currentTestData.AzureShareUrl
 $resourceName=$AzureShare.Split("//")[2].Split(".")[0]
-$AccessKey=(Get-AzureRmStorageAccountKey -ResourceGroupName $resourceName -Name $resourceName.value[0]
+$AccessKey=(Get-AzureRmStorageAccountKey -ResourceGroupName $resourceName -Name $resourceName).value[0]
 #$AccessKey=(Get-AzureRmStorageAccountKey -ResourceGroupName $AzureShare.Split("//")[2].Split(".")[0] -Name $AzureShare.Split("//")[2].Split(".")[0]).value[0]
 $MountPoint=$currentTestData.MountPoint
 
