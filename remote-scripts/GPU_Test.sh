@@ -39,7 +39,7 @@ while echo $1 | grep ^- > /dev/null; do
 	shift
 done
 
-CUDADriverVersion="8.0.61-1"
+CUDADriverVersion="9.1.85-1"
 ICA_TESTRUNNING="TestRunning"	  # The test is running
 ICA_TESTCOMPLETED="TestCompleted"  # The test completed successfully
 ICA_TESTABORTED="TestAborted"	  # Error during setup of test
@@ -87,8 +87,8 @@ InstallGPUDrivers() {
 				rm -f /tmp/${CUDA_REPO_PKG}
 				until dpkg --force-all --configure -a; sleep 10; do echo 'Trying again...'; done
 				apt-get -y update
-				apt-get -y install linux-tools-generic linux-cloud-tools-generic
-				apt-get -y install cuda-drivers
+				apt-get -y --allow-unauthenticated install linux-tools-generic linux-cloud-tools-generic
+				apt-get -y --allow-unauthenticated install cuda-drivers
 								
 		elif [[ $DISTRO =~ "Ubuntu 14.04" ]];
 		then
@@ -99,12 +99,12 @@ InstallGPUDrivers() {
 				dpkg -i /tmp/${CUDA_REPO_PKG}
 				rm -f /tmp/${CUDA_REPO_PKG}
 				apt-get -y update
-				apt-get -y install linux-tools-generic linux-cloud-tools-generic
-				apt-get -y install cuda-drivers
+				apt-get -y --allow-unauthenticated install linux-tools-generic linux-cloud-tools-generic
+				apt-get -y --allow-unauthenticated install cuda-drivers
 				
-		elif [[ $DISTRO =~ "CentOS Linux release 7.3" ]];
+		elif [[ $DISTRO =~ "CentOS Linux release 7.3" ]] || [[ $DISTRO =~ "CentOS Linux release 7.4" ]] || [[ $DISTRO =~ "Red Hat Enterprise Linux Server release 7.4" ]];
 		then
-				LogMsg "Detected CENTOS73"
+				LogMsg "Detected CentOS 7.x / RHEL 7.x"
 				sed -i "/^exclude=kernel/c\#exclude=kernel*" /etc/yum.conf
 				yum -y update
 				yum -y --nogpgcheck install kernel-devel

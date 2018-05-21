@@ -117,6 +117,10 @@ Function DetectLinuxDistro($VIP, $SSHport, $testVMUser, $testVMPassword)
 			{
 				$CleanedDistroName = "COREOS"
 			}
+			elseif ($DistroName -imatch "CLEARLINUX")
+			{
+				$CleanedDistroName = "CLEARLINUX"
+			}
 			else
 			{
 				$CleanedDistroName = "UNKNOWN"
@@ -1103,152 +1107,233 @@ Function RemoveICAUnusedDataDisks()
 #function to collect and compare kernel logs
 Function GetAndCheckKernelLogs($allDeployedVMs, $status, $vmUser, $vmPassword)
 {
-	if ( !$vmUser )
+	try
 	{
-		$vmUser = $user
-	}
-	if ( !$vmPassword )
-	{
-		$vmPassword = $password
-	}
-	$retValue = $false
-	foreach ($VM in $allDeployedVMs)
-	{
-		$BootLogDir="$Logdir\$($VM.RoleName)"
-		mkdir $BootLogDir -Force | Out-Null			
-		LogMsg "Collecting $($VM.RoleName) VM Kernel $status Logs.."
-		$InitailBootLog="$BootLogDir\InitialBootLogs.txt"
-		$FinalBootLog="$BootLogDir\FinalBootLogs.txt"
-		$KernelLogStatus="$BootLogDir\KernelLogStatus.txt"
-		if($status -imatch "Initial")
+		if ( !$vmUser )
 		{
-			$randomFileName = [System.IO.Path]::GetRandomFileName()
-			Set-Content -Value "A Random file." -Path "$Logdir\$randomFileName"
-			$out = RemoteCopy -uploadTo $VM.PublicIP -port $VM.SSHPort  -files "$Logdir\$randomFileName" -username $vmUser -password $vmPassword -upload
-			Remove-Item -Path "$Logdir\$randomFileName" -Force
-			$out = RunLinuxCmd -ip $VM.PublicIP -port $VM.SSHPort -username $vmUser -password $vmPassword -command "dmesg > /home/$vmUser/InitialBootLogs.txt" -runAsSudo
-			$out = RemoteCopy -download -downloadFrom $VM.PublicIP -port $VM.SSHPort -files "/home/$vmUser/InitialBootLogs.txt" -downloadTo $BootLogDir -username $vmUser -password $vmPassword
-			LogMsg "$($VM.RoleName): $status Kernel logs collected ..SUCCESSFULLY"
-			LogMsg "Checking for call traces in kernel logs.."
-			$KernelLogs = Get-Content $InitailBootLog 
-			$callTraceFound  = $false
-			foreach ( $line in $KernelLogs )
-			{
-				if ( $line -imatch "Call Trace" )
-				{
-					LogErr $line
-					$callTraceFound = $true
-				}
-				if ( $callTraceFound )
-				{
-					if ( $line -imatch "\[<")
-					{
-						LogErr $line
-					}
-				}
-			}
-			if ( !$callTraceFound )
-			{
-				LogMsg "No any call traces found."
-			}
-			$detectedDistro = DetectLinuxDistro -VIP $VM.PublicIP -SSHport $VM.SSHPort -testVMUser $vmUser -testVMPassword $vmPassword
-			SetDistroSpecificVariables -detectedDistro $detectedDistro
-			$retValue = $true
+			$vmUser = $user
 		}
-		elseif($status -imatch "Final")
+		if ( !$vmPassword )
 		{
-			$out = RunLinuxCmd -ip $VM.PublicIP -port $VM.SSHPort -username $vmUser -password $vmPassword -command "dmesg > /home/$vmUser/FinalBootLogs.txt" -runAsSudo
-			$out = RemoteCopy -download -downloadFrom $VM.PublicIP -port $VM.SSHPort -files "/home/$vmUser/FinalBootLogs.txt" -downloadTo $BootLogDir -username $vmUser -password $vmPassword
-			LogMsg "Checking for call traces in kernel logs.."
-			$KernelLogs = Get-Content $FinalBootLog
-			$callTraceFound  = $false
-			foreach ( $line in $KernelLogs )
+			$vmPassword = $password
+		}
+		$retValue = $false
+		foreach ($VM in $allDeployedVMs)
+		{
+			$BootLogDir="$Logdir\$($VM.RoleName)"
+			mkdir $BootLogDir -Force | Out-Null
+			LogMsg "Collecting $($VM.RoleName) VM Kernel $status Logs.."
+			$InitailBootLog="$BootLogDir\InitialBootLogs.txt"
+			$FinalBootLog="$BootLogDir\FinalBootLogs.txt"
+			$KernelLogStatus="$BootLogDir\KernelLogStatus.txt"
+			if($status -imatch "Initial")
 			{
-				if ( $line -imatch "Call Trace" )
+				$randomFileName = [System.IO.Path]::GetRandomFileName()
+				Set-Content -Value "A Random file." -Path "$Logdir\$randomFileName"
+				$out = RemoteCopy -uploadTo $VM.PublicIP -port $VM.SSHPort  -files "$Logdir\$randomFileName" -username $vmUser -password $vmPassword -upload
+				Remove-Item -Path "$Logdir\$randomFileName" -Force
+				$out = RunLinuxCmd -ip $VM.PublicIP -port $VM.SSHPort -username $vmUser -password $vmPassword -command "dmesg > /home/$vmUser/InitialBootLogs.txt" -runAsSudo
+				$out = RemoteCopy -download -downloadFrom $VM.PublicIP -port $VM.SSHPort -files "/home/$vmUser/InitialBootLogs.txt" -downloadTo $BootLogDir -username $vmUser -password $vmPassword
+				LogMsg "$($VM.RoleName): $status Kernel logs collected ..SUCCESSFULLY"
+				LogMsg "Checking for call traces in kernel logs.."
+				$KernelLogs = Get-Content $InitailBootLog 
+				$callTraceFound  = $false
+				foreach ( $line in $KernelLogs )
 				{
-					LogErr $line
-					$callTraceFound = $true
-				}
-				if ( $callTraceFound )
-				{
-					if ( $line -imatch "\[<")
+					if (( $line -imatch "Call Trace" ) -and  ($line -inotmatch "initcall "))
 					{
 						LogErr $line
+						$callTraceFound = $true
+					}
+					if ( $callTraceFound )
+					{
+						if ( $line -imatch "\[<")
+						{
+							LogErr $line
+						}
 					}
 				}
-			}
-			if ( !$callTraceFound )
-			{
-				LogMsg "No any call traces found."
-			}
-			$KernelDiff = Compare-Object -ReferenceObject (Get-Content $FinalBootLog) -DifferenceObject (Get-Content $InitailBootLog)
-			#Removing final dmesg file from logs to reduce the size of logs. We can alwayas see complete Final Logs as : Initial Kernel Logs + Difference in Kernel Logs
-			Remove-Item -Path $FinalBootLog -Force | Out-Null
-			if($KernelDiff -eq $null)
-			{
-				LogMsg "** Initial and Final Kernel Logs has same content **"  
-				Set-Content -Value "*** Initial and Final Kernel Logs has same content ***" -Path $KernelLogStatus
+				if ( !$callTraceFound )
+				{
+					LogMsg "No any call traces found."
+				}
+				$detectedDistro = DetectLinuxDistro -VIP $VM.PublicIP -SSHport $VM.SSHPort -testVMUser $vmUser -testVMPassword $vmPassword
+				SetDistroSpecificVariables -detectedDistro $detectedDistro
 				$retValue = $true
 			}
-			else
+			elseif($status -imatch "Final")
 			{
-				$errorCount = 0
-				Set-Content -Value "Following lines were added in the kernel log during execution of test." -Path $KernelLogStatus
-				LogMsg "Following lines were added in the kernel log during execution of test." 
-				Add-Content -Value "-------------------------------START----------------------------------" -Path $KernelLogStatus
-				foreach ($line in $KernelDiff)
+				$out = RunLinuxCmd -ip $VM.PublicIP -port $VM.SSHPort -username $vmUser -password $vmPassword -command "dmesg > /home/$vmUser/FinalBootLogs.txt" -runAsSudo
+				$out = RemoteCopy -download -downloadFrom $VM.PublicIP -port $VM.SSHPort -files "/home/$vmUser/FinalBootLogs.txt" -downloadTo $BootLogDir -username $vmUser -password $vmPassword
+				LogMsg "Checking for call traces in kernel logs.."
+				$KernelLogs = Get-Content $FinalBootLog
+				$callTraceFound  = $false
+				foreach ( $line in $KernelLogs )
 				{
-					Add-Content -Value $line.InputObject -Path $KernelLogStatus
-					if ( ($line.InputObject -imatch "fail") -or ($line.InputObject -imatch "error") -or ($line.InputObject -imatch "warning"))
+					if (( $line -imatch "Call Trace" ) -and ($line -inotmatch "initcall "))
 					{
-						$errorCount += 1
-						LogErr $line.InputObject
+						LogErr $line
+						$callTraceFound = $true
 					}
-					else
+					if ( $callTraceFound )
 					{
-						LogMsg $line.InputObject
+						if ( $line -imatch "\[<")
+						{
+							LogErr $line
+						}
 					}
 				}
-				Add-Content -Value "--------------------------------EOF-----------------------------------" -Path $KernelLogStatus
-			}
-			LogMsg "$($VM.RoleName): $status Kernel logs collected and Compared ..SUCCESSFULLY"
-			if ($errorCount -gt 0)
-			{
-				LogErr "Found $errorCount fail/error/warning messages in kernel logs during execution."
-				$retValue = $false
-			}
-			if ( $callTraceFound )
-			{
-				if ( $UseAzureResourceManager )
+				if ( !$callTraceFound )
 				{
-					LogMsg "Preserving the Resource Group(s) $($VM.ResourceGroupName)"
-					LogMsg "Setting tags : $preserveKeyword = yes; testName = $testName"
-					$hash = @{}
-					$hash.Add($preserveKeyword,"yes")
-					$hash.Add("testName","$testName")
-					$out = Set-AzureRmResourceGroup -Name $($VM.ResourceGroupName) -Tag $hash
-					LogMsg "Setting tags : calltrace = yes; testName = $testName"
-					$hash = @{}
-					$hash.Add("calltrace","yes")
-					$hash.Add("testName","$testName")
-					$out = Set-AzureRmResourceGroup -Name $($VM.ResourceGroupName) -Tag $hash
+					LogMsg "No any call traces found."
+				}
+				$KernelDiff = Compare-Object -ReferenceObject (Get-Content $FinalBootLog) -DifferenceObject (Get-Content $InitailBootLog)
+				#Removing final dmesg file from logs to reduce the size of logs. We can alwayas see complete Final Logs as : Initial Kernel Logs + Difference in Kernel Logs
+				Remove-Item -Path $FinalBootLog -Force | Out-Null
+				if($KernelDiff -eq $null)
+				{
+					LogMsg "** Initial and Final Kernel Logs has same content **"  
+					Set-Content -Value "*** Initial and Final Kernel Logs has same content ***" -Path $KernelLogStatus
+					$retValue = $true
 				}
 				else
 				{
-					LogMsg "Adding preserve tag to $($VM.ServiceName) .."
-					$out = Set-AzureService -ServiceName $($VM.ServiceName) -Description $preserveKeyword
+					$errorCount = 0
+					Set-Content -Value "Following lines were added in the kernel log during execution of test." -Path $KernelLogStatus
+					LogMsg "Following lines were added in the kernel log during execution of test." 
+					Add-Content -Value "-------------------------------START----------------------------------" -Path $KernelLogStatus
+					foreach ($line in $KernelDiff)
+					{
+						Add-Content -Value $line.InputObject -Path $KernelLogStatus
+						if ( ($line.InputObject -imatch "fail") -or ($line.InputObject -imatch "error") -or ($line.InputObject -imatch "warning"))
+						{
+							$errorCount += 1
+							LogErr $line.InputObject
+						}
+						else
+						{
+							LogMsg $line.InputObject
+						}
+					}
+					Add-Content -Value "--------------------------------EOF-----------------------------------" -Path $KernelLogStatus
+				}
+				LogMsg "$($VM.RoleName): $status Kernel logs collected and Compared ..SUCCESSFULLY"
+				if ($errorCount -gt 0)
+				{
+					LogErr "Found $errorCount fail/error/warning messages in kernel logs during execution."
+					$retValue = $false
+				}
+				if ( $callTraceFound )
+				{
+					if ( $UseAzureResourceManager )
+					{
+						LogMsg "Preserving the Resource Group(s) $($VM.ResourceGroupName)"
+						LogMsg "Setting tags : $preserveKeyword = yes; testName = $testName"
+						$hash = @{}
+						$hash.Add($preserveKeyword,"yes")
+						$hash.Add("testName","$testName")
+						$out = Set-AzureRmResourceGroup -Name $($VM.ResourceGroupName) -Tag $hash
+						LogMsg "Setting tags : calltrace = yes; testName = $testName"
+						$hash = @{}
+						$hash.Add("calltrace","yes")
+						$hash.Add("testName","$testName")
+						$out = Set-AzureRmResourceGroup -Name $($VM.ResourceGroupName) -Tag $hash
+					}
+					else
+					{
+						LogMsg "Adding preserve tag to $($VM.ServiceName) .."
+						$out = Set-AzureService -ServiceName $($VM.ServiceName) -Description $preserveKeyword
+					}
 				}
 			}
+			else
+			{
+				LogMsg "pass value for status variable either final or initial"
+				$retValue = $false
+			}
 		}
-		else
-		{
-			LogMsg "pass value for status variable either final or initial"
-			$retValue = $false
-		}
+	}
+	catch
+	{
+		$retValue = $false
 	}
 	return $retValue
 }
 
+Function CheckKernelLogs($allVMData, $vmUser, $vmPassword)
+{
+	try
+	{
+		$errorLines = @()
+		$errorLines += "Call Trace"
+		$errorLines += "rcu_sched self-detected stall on CPU"
+		$errorLines += "rcu_sched detected stalls on"
+		$errorLines += "BUG: soft lockup"
+		$totalErrors = 0
+		if ( !$vmUser )
+		{
+			$vmUser = $user
+		}
+		if ( !$vmPassword )
+		{
+			$vmPassword = $password
+		}
+		$retValue = $false
+		foreach ($VM in $allVMData)
+		{
+			$vmErrors = 0
+			$BootLogDir="$Logdir\$($VM.RoleName)"
+			mkdir $BootLogDir -Force | Out-Null
+			LogMsg "Collecting $($VM.RoleName) VM Kernel $status Logs.."
+			$currentKernelLogFile="$BootLogDir\CurrentKernelLogs.txt"
+			$out = RunLinuxCmd -ip $VM.PublicIP -port $VM.SSHPort -username $vmUser -password $vmPassword -command "dmesg > /home/$vmUser/CurrentKernelLogs.txt" -runAsSudo
+			$out = RemoteCopy -download -downloadFrom $VM.PublicIP -port $VM.SSHPort -files "/home/$vmUser/CurrentKernelLogs.txt" -downloadTo $BootLogDir -username $vmUser -password $vmPassword
+			LogMsg "$($VM.RoleName): $status Kernel logs collected ..SUCCESSFULLY"
+			foreach ($errorLine in $errorLines)
+			{
+				LogMsg "Checking for $errorLine in kernel logs.."
+				$KernelLogs = Get-Content $currentKernelLogFile 
+				$callTraceFound  = $false
+				foreach ( $line in $KernelLogs )
+				{
+					if ( ($line -imatch "$errorLine") -and ($line -inotmatch "initcall "))
+					{
+						LogErr $line
+						$totalErrors += 1
+						$vmErrors += 1
+					}
+					if ( $line -imatch "\[<")
+					{
+						LogErr $line
+					}
+				}
+			}
+			if ( $vmErrors -eq 0 )
+			{
+				LogMsg "$($VM.RoleName) : No issues in kernel logs."
+				$retValue = $true
+			}
+			else
+			{
+				LogErr "$($VM.RoleName) : $vmErrors errors found."
+				$retValue = $false
+			}
+		}
+		if ( $totalErrors -eq 0 )
+		{
+			$retValue = $true
+		}
+		else
+		{
+			$retValue = $false
+		}
+	}
+	catch
+	{
+		$retValue = $false
+	}
+	return $retValue
+}
 Function SetDistroSpecificVariables($detectedDistro)
 {
 	$python_cmd = "python"	
@@ -1361,6 +1446,7 @@ Function DeployManagementServices ($xmlConfig, $setupType, $Distro, $getLogsIfFa
 			else
 			{
 				Write-Host "Exception detected. Source : DeployVMs()"
+				Write-Host "$($_.Exception.GetType().FullName, " : ",$_.Exception.Message)"
 			}
 			$retValue = $NULL
 		}
@@ -1615,23 +1701,22 @@ Function isAllSSHPortsEnabled($DeployedServices)
 			$IPPORT = $IPPORT.Split(":")
 			$testIP = $IPPORT[0]
 			$testPort = $IPPORT[1]
-			Write-Host "Connecting to  $TestIP : $testPort" -NoNewline
 			$out = Test-TCP  -testIP $TestIP -testport $testPort
 			if ($out -ne "True")
-			{ 
-				Write-Host " : Failed"
+			{
+				LogMsg "Connecting to  $TestIP : $testPort : Failed"
 				$WaitingForConnect = $WaitingForConnect + 1
 			}
 			else
 			{
-				Write-Host " : Connected"
+				LogMsg "Connecting to  $TestIP : $testPort : Connected"
 			}
 		}
 		if($WaitingForConnect -gt 0)
 		{
 			$timeout = $timeout + 1
-			Write-Host "$WaitingForConnect VM(s) still awaiting to open SSH port.." -NoNewline
-			Write-Host "Retry $timeout/100"
+			LogMsg "$WaitingForConnect VM(s) still awaiting to open SSH port.."
+			LogMsg "Retry $timeout/100"
 			sleep 3
 			$retValue = "False"
 		}
@@ -1932,7 +2017,7 @@ Function GetTestVMHardwareDetails ($xmlConfigFile, $setupType, [switch]$VCPU, [s
 Function RemoteCopy($uploadTo, $downloadFrom, $downloadTo, $port, $files, $username, $password, [switch]$upload, [switch]$download, [switch]$usePrivateKey, [switch]$doNotCompress) #Removed XML config
 {
 	$retry=1
-	$maxRetry=3
+	$maxRetry=20
 	if($upload)
 	{
 #LogMsg "Uploading the files"
@@ -1978,7 +2063,7 @@ Function RemoteCopy($uploadTo, $downloadFrom, $downloadTo, $port, $files, $usern
 				if ( $CompressCount -eq $fileCounter )
 				{
 					$retry=1
-					$maxRetry=3
+					$maxRetry=10
 					while($retry -le $maxRetry)
 					{
 						if($usePrivateKey)
@@ -2136,7 +2221,7 @@ Function RemoteCopy($uploadTo, $downloadFrom, $downloadTo, $port, $files, $usern
 			foreach ($f in $files)
 			{
 				$retry=1
-				$maxRetry=10
+				$maxRetry=50
 				$testFile = $f.trim()
 				$recurse = ""
 				while($retry -le $maxRetry)
@@ -2171,10 +2256,23 @@ Function RemoteCopy($uploadTo, $downloadFrom, $downloadTo, $port, $files, $usern
 					else
 					{
 						LogMsg "Downloading $testFile from $username : $downloadFrom,port $port to $downloadTo using Password authentication"
-						$curDir = $PWD
+						$curDir =  (Get-Item -Path ".\" -Verbose).FullName
 						$downloadStatusRandomFile = "DownloadStatusFile" + (Get-Random -Maximum 9999 -Minimum 1111) + ".txt"
+						Set-Content -Value "1" -Path $downloadStatusRandomFile;
 						$downloadStartTime = Get-Date
-						$downloadJob = Start-Job -ScriptBlock { $curDir=$args[0];$password=$args[1];$port=$args[2];$testFile=$args[3];$username=$args[4];${downloadFrom}=$args[5];$downloadTo=$args[6];$downloadStatusRandomFile=$args[7]; cd $curDir; Set-Content -Value "1" -Path $args[6]; ; echo y | .\tools\pscp -pw $password -q -P $port $username@${downloadFrom}:$testFile $downloadTo ; Set-Content -Value $LASTEXITCODE -Path $downloadStatusRandomFile;} -ArgumentList $curDir,$password,$port,$testFile,$username,${downloadFrom},$downloadTo,$downloadStatusRandomFile
+						$downloadJob = Start-Job -ScriptBlock { 
+							$curDir=$args[0];
+							$password=$args[1];
+							$port=$args[2];
+							$testFile=$args[3];
+							$username=$args[4];
+							${downloadFrom}=$args[5];
+							$downloadTo=$args[6];
+							$downloadStatusRandomFile=$args[7];
+							cd $curDir; 
+							echo y | .\tools\pscp.exe  -v -2 -unsafe -pw $password -q -P $port $username@${downloadFrom}:$testFile $downloadTo 2> $downloadStatusRandomFile; 
+							Add-Content -Value "DownloadExtiCode_$LASTEXITCODE" -Path $downloadStatusRandomFile;
+						} -ArgumentList $curDir,$password,$port,$testFile,$username,${downloadFrom},$downloadTo,$downloadStatusRandomFile
 						sleep -Milliseconds 100
 						$downloadJobStatus = Get-Job -Id $downloadJob.Id
 						$downloadTimout = $false
@@ -2191,7 +2289,29 @@ Function RemoteCopy($uploadTo, $downloadFrom, $downloadTo, $port, $files, $usern
 							$downloadJobStatus = Get-Job -Id $downloadJob.Id
 						}
 						Write-Host ""
-						$returnCode = Get-Content -Path $downloadStatusRandomFile
+						$downloadExitCode = (Select-String -Path $downloadStatusRandomFile -Pattern "DownloadExtiCode_").Line
+						if ( $downloadExitCode )
+						{
+							$returnCode = $downloadExitCode.Replace("DownloadExtiCode_",'')
+						}
+						if ( $returnCode -eq 0)
+						{
+							LogMsg "Download command returned exit code 0"
+						}
+						else 
+						{
+							$receivedFiles = Select-String -Path "$downloadStatusRandomFile" -Pattern "Sending file"
+							if ($receivedFiles.Count -ge 1)
+							{
+								LogMsg "Received $($receivedFiles.Count) file(s)"
+								$returnCode = 0
+							}
+							else 
+							{
+								LogMsg "Download command returned exit code $returnCode"
+								LogMsg "$(Get-Content -Path $downloadStatusRandomFile)"
+							}
+						}
 						Remove-Item -Force $downloadStatusRandomFile | Out-Null
 						Remove-Job -Id $downloadJob.Id -Force | Out-Null
 					}
@@ -2251,7 +2371,7 @@ Function RunLinuxCmd([string] $username,[string] $password,[string] $ip,[string]
 		WrapperCommandsToFile $username $password $ip $command $port
 	}
 	$randomFileName = [System.IO.Path]::GetRandomFileName()
-	$maxRetryCount = 3
+	$maxRetryCount = 20
 	$currentDir = $PWD.Path
 	$RunStartTime = Get-Date
 	
@@ -2368,7 +2488,7 @@ Function RunLinuxCmd([string] $username,[string] $password,[string] $ip,[string]
 					$timeOut = $true
 				}
 			}
-			WaitFor -seconds 5
+			WaitFor -seconds 2
 			$SSHOut = Receive-Job $runLinuxCmdJob 2> $LogDir\$randomFileName
 			if($SSHOut )
 			{
@@ -2581,6 +2701,34 @@ Function DoTestCleanUp($result, $testName, $DeployedServices, $ResourceGroups, [
 	{
 		if($DeployedServices -or $ResourceGroups)
 		{
+			try
+			{
+				foreach ($vmData in $allVMData)
+				{
+					$out = RemoteCopy -upload -uploadTo $vmData.PublicIP -port $vmData.SSHPort -files .\remote-scripts\CollectLogFile.sh -username $user -password $password
+					$out = RunLinuxCmd -username $user -password $password -ip $vmData.PublicIP -port $vmData.SSHPort -command "bash CollectLogFile.sh" -ignoreLinuxExitCode
+					$out = RemoteCopy -downloadFrom $vmData.PublicIP -port $vmData.SSHPort -username $user -password $password -files "$($vmData.RoleName)-*.txt" -downloadTo "$LogDir" -download
+					$finalKernelVersion = Get-Content "$LogDir\$($vmData.RoleName)-kernelVersion.txt"
+					Set-Variable -Name finalKernelVersion -Value $finalKernelVersion -Scope Global
+					#region LIS Version
+					$tempLIS = (Select-String -Path "$LogDir\$($vmData.RoleName)-lis.txt" -Pattern "^version:").Line
+					if ($tempLIS)
+					{
+						$finalLISVersion = $tempLIS.Split(":").Trim()[1]
+					}
+					else
+					{
+						$finalLISVersion = "NA"
+					}
+					Set-Variable -Name finalLISVersion -Value $finalLISVersion -Scope Global
+					Write-Host "Setting : finalLISVersion : $finalLISVersion"
+					#endregion
+				}
+			}
+			catch
+			{
+				LogErr "Ignorable error in collecting final data from VMs."
+			}
 			$currentTestBackgroundJobs = Get-Content $LogDir\CurrentTestBackgroundJobs.txt -ErrorAction SilentlyContinue
 			if ( $currentTestBackgroundJobs )
 			{
@@ -2653,11 +2801,11 @@ Function DoTestCleanUp($result, $testName, $DeployedServices, $ResourceGroups, [
 										$isClened = DeleteService -serviceName $hsDetails.ServiceName
 										if ($isClened -contains "False")
 										{
-											LogMsg "CleanUP unsuccessful for $($hsDetails.ServiceName).. Please delete the services manually."
+											#LogMsg "CleanUP unsuccessful for $($hsDetails.ServiceName).. Please delete the services manually."
 										}
 										else
 										{
-											LogMsg "CleanUP Successful for $($hsDetails.ServiceName).."
+											#LogMsg "CleanUP Successful for $($hsDetails.ServiceName).."
 										}
 									}
 								}
@@ -2705,76 +2853,84 @@ Function DoTestCleanUp($result, $testName, $DeployedServices, $ResourceGroups, [
 				$isVMLogsCollected = $false
 				foreach ($group in $ResourceGroups)
 				{
-					if($result -eq "PASS")
+					if ($ForceDeleteResources)
 					{
-						if($EconomyMode -and (-not $IsLastCaseInCycle))
+						LogMsg "-ForceDeleteResources is Set. Deleting $group."
+						$isClened = DeleteResourceGroup -RGName $group
+					}
+					else 
+					{
+						if($result -eq "PASS")
 						{
-							LogMsg "Skipping cleanup of Resource Group : $group."
-							if(!$keepUserDirectory)
+							if($EconomyMode -and (-not $IsLastCaseInCycle))
 							{
-								RemoveAllFilesFromHomeDirectory -allDeployedVMs $allVMData
+								LogMsg "Skipping cleanup of Resource Group : $group."
+								if(!$keepUserDirectory)
+								{
+									RemoveAllFilesFromHomeDirectory -allDeployedVMs $allVMData
+								}
+							}
+							else
+							{
+								$RGdetails = Get-AzureRmResourceGroup -Name $group
+								if ( $RGdetails.Tags )
+								{
+									if ( (  $RGdetails.Tags[0].Name -eq $preserveKeyword ) -and (  $RGdetails.Tags[0].Value -eq "yes" ))
+									{
+										LogMsg "Skipping Cleanup of preserved resource group."
+										LogMsg "Collecting VM logs.."
+										if ( !$isVMLogsCollected)
+										{
+											GetVMLogs -allVMData $allVMData
+										}
+										$isVMLogsCollected = $true
+									}
+								}
+								else
+								{
+									if ( $keepReproInact )
+									{
+										LogMsg "Skipping cleanup due to 'keepReproInact' flag is set."
+									}
+									else
+									{
+										LogMsg "Cleaning up deployed test virtual machines."
+										$isClened = DeleteResourceGroup -RGName $group
+										if (!$isClened)
+										{
+											LogMsg "CleanUP unsuccessful for $group.. Please delete the services manually."
+										}
+										else
+										{
+											#LogMsg "CleanUP Successful for $group.."
+										}
+									}
+								}
 							}
 						}
 						else
 						{
-							$RGdetails = Get-AzureRmResourceGroup -Name $group
-                            if ( $RGdetails.Tags )
-                            {
-							    if ( (  $RGdetails.Tags[0].Name -eq $preserveKeyword ) -and (  $RGdetails.Tags[0].Value -eq "yes" ))
-							    {
-								    LogMsg "Skipping Cleanup of preserved resource group."
-								    LogMsg "Collecting VM logs.."
-								    if ( !$isVMLogsCollected)
-								    {
-									    GetVMLogs -allVMData $allVMData
-								    }
-								    $isVMLogsCollected = $true
-							    }
-                            }
-							else
+							LogMsg "Preserving the Resource Group(s) $group"
+							LogMsg "Setting tags : preserve = yes; testName = $testName"
+							$hash = @{}
+							$hash.Add($preserveKeyword,"yes")
+							$hash.Add("testName","$testName")
+							$out = Set-AzureRmResourceGroup -Name $group -Tag $hash
+							LogMsg "Collecting VM logs.."
+							if ( !$isVMLogsCollected)
 							{
-                                if ( $keepReproInact )
-                                {
-									LogMsg "Skipping cleanup due to 'keepReproInact' flag is set."
-                                }
-                                else
-                                {
-									LogMsg "Cleaning up deployed test virtual machines."
-									$isClened = DeleteResourceGroup -RGName $group
-									if (!$isClened)
-									{
-										LogMsg "CleanUP unsuccessful for $group.. Please delete the services manually."
-									}
-								    else
-									{
-										LogMsg "CleanUP Successful for $group.."
-									}
-                                }
+								GetVMLogs -allVMData $allVMData
 							}
-						}
-					}
-					else
-					{
-						LogMsg "Preserving the Resource Group(s) $group"
-						LogMsg "Setting tags : preserve = yes; testName = $testName"
-						$hash = @{}
-						$hash.Add($preserveKeyword,"yes")
-						$hash.Add("testName","$testName")
-						$out = Set-AzureRmResourceGroup -Name $group -Tag $hash
-						LogMsg "Collecting VM logs.."
-						if ( !$isVMLogsCollected)
-						{
-							GetVMLogs -allVMData $allVMData
-						}
-						$isVMLogsCollected = $true
-						if(!$keepUserDirectory -and !$keepReproInact -and $EconomyMode)
+							$isVMLogsCollected = $true
+							if(!$keepUserDirectory -and !$keepReproInact -and $EconomyMode)
+								{
+									RemoveAllFilesFromHomeDirectory -allDeployedVMs $allVMData
+								}
+							if($keepReproInact)
 							{
-								RemoveAllFilesFromHomeDirectory -allDeployedVMs $allVMData
+								$xmlConfig.config.Azure.Deployment.$setupType.isDeployed = "NO"
 							}
-						if($keepReproInact)
-						{
-							$xmlConfig.config.Azure.Deployment.$setupType.isDeployed = "NO"
-						}
+						}						
 					}
 				}
 			}
@@ -4594,17 +4750,22 @@ Function GetAllDeployementData($DeployedServices, $ResourceGroups)
 				else
 				{
 					LogMsg "    Microsoft.Network/networkSecurityGroups data collection in progress.."
-					$SGData = Get-AzureRmResource -ResourceGroupName $ResourceGroup -ResourceName "SG-$ResourceGroup" -ResourceType "Microsoft.Network/networkSecurityGroups" -ExpandProperties
+					$SGData = Get-AzureRmResource -ResourceGroupName $ResourceGroup -ResourceName "SG-$($testVM.ResourceName)" -ResourceType "Microsoft.Network/networkSecurityGroups" -ExpandProperties
 					foreach ($securityRule in $SGData.Properties.securityRules)
 					{
 						Add-Member -InputObject $QuickVMNode -MemberType NoteProperty -Name "$($securityRule.name)Port" -Value $securityRule.properties.destinationPortRange -Force
 					}
 					if($AllEndpoints.Length -eq 0)
 					{
-						$sg = Get-AzureRmNetworkSecurityGroup -ResourceGroupName $testVM.ResourceGroupName
+						$sg = Get-AzureRmNetworkSecurityGroup -ResourceGroupName $testVM.ResourceGroupName -Name "SG-$($testVM.ResourceName)"
 						foreach($rule in $sg.SecurityRules)
 						{
-							Add-Member -InputObject $QuickVMNode -MemberType NoteProperty -Name "$($rule.Name)Port" -Value $rule.DestinationPortRange -Force
+							Add-Member -InputObject $QuickVMNode -MemberType NoteProperty -Name "$($rule.Name)Port" -Value $rule.DestinationPortRange[0] -Force
+							if (($rule.Name -imatch "Cleanuptool-22-Corpnet") -and ($QuickVMNode.SSHPort -ne "22"))
+							{
+								LogMsg "    Cleanuptool-22-Corpnet detected. Applying workaroud."
+								Add-Member -InputObject $QuickVMNode -MemberType NoteProperty -Name "SSHPort" -Value "22" -Force
+							}                
 						}
 					}
 				}
@@ -5021,28 +5182,19 @@ Function VerifyDNSServerInResolvConf($DeployedServices, $dnsServerIP)
 
 Function RestartAllDeployments($allVMData)
 {
+	$currentGUID = ([guid]::newguid()).Guid
+	$out = Save-AzureRmContext -Path "$env:TEMP\$($currentGUID).azurecontext" -Force
+	$restartJobs = @()	
 	foreach ( $vmData in $AllVMData )
 	{
 		if ( $UseAzureResourceManager)
 		{
-			$restartVM = Restart-AzureRmVM -ResourceGroupName $vmData.ResourceGroupName -Name $vmData.RoleName -Verbose
-			if ( $restartVM.Status -eq "Succeeded" )
-			{
-				LogMsg "Restarted : $($vmData.RoleName)"
-			}
-			else
-			{
-				LogErr "FAILED TO RESTART : $($vmData.RoleName)"
-				$retryCount = $retryCount + 1
-				if ($retryCount -gt 0)
-				{
-					LogMsg "Retrying..."
-				}
-				if ($retryCount -eq 0)
-				{
-					Throw "Unable to Restart : $($vmData.RoleName)"
-				}
-			}
+			LogMsg "Triggering Restart-$($vmData.RoleName)..."
+			$restartJobs += Start-Job -ScriptBlock { $vmData = $args[0]
+				$currentGUID = $args[1]
+				Import-AzureRmContext -AzureContext "$env:TEMP\$($currentGUID).azurecontext"
+				$restartVM = Restart-AzureRmVM -ResourceGroupName $vmData.ResourceGroupName -Name $vmData.RoleName -Verbose
+			} -ArgumentList $vmData,$currentGUID -Name "Restart-$($vmData.RoleName)"
 		}
 		else
 		{
@@ -5067,6 +5219,34 @@ Function RestartAllDeployments($allVMData)
 			}
 		}
 	}
+	$recheckAgain = $true
+	LogMsg "Waiting until VMs restart..."
+	$jobCount = $restartJobs.Count
+	$completedJobsCount = 0
+	While ($recheckAgain)
+	{
+		$recheckAgain = $false
+		$tempJobs = @()
+		foreach ($restartJob in $restartJobs)
+		{
+			if ($restartJob.State -eq "Completed")
+			{
+				$completedJobsCount += 1
+				LogMsg "[$completedJobsCount/$jobCount] $($restartJob.Name) is done."
+				$out = Remove-Job -Id $restartJob.ID -Force -ErrorAction SilentlyContinue
+			}
+			else
+			{
+				$tempJobs += $restartJob
+				$recheckAgain = $true
+			}
+		}
+		$restartJobs = $tempJobs
+		Start-Sleep -Seconds 1
+	}
+	
+	Remove-Item -Path "$env:TEMP\$($currentGUID).azurecontext" -Force -ErrorAction SilentlyContinue | Out-Null
+
 	$isSSHOpened = isAllSSHPortsEnabledRG -AllVMDataObject $AllVMData
 	return $isSSHOpened
 }
@@ -5917,7 +6097,7 @@ Function PerformIOTestOnDisk($testVMObject, [string]$attachedDisk, [string]$disk
 		$mountPoint = "/mnt/datadisk"
 		LogMsg "Performing I/O operations on $attachedDisk.."
 		$LogPath = "$LogDir\VerifyIO$($attachedDisk.Replace('/','-')).txt"
-		$dmesgBefore = RunLinuxCmd -username $testVMUsername -password $testVMPassword -ip $testVMVIP -port $testVMSSHport -command "dmesg" -runAsSudo 
+		$dmesgBefore = RunLinuxCmd -username $testVMUsername -password $testVMPassword -ip $testVMVIP -port $testVMSSHport -command "dmesg" -runMaxAllowedTime 30 -runAsSudo
 		#CREATE A MOUNT DIRECTORY
 		$out = RunLinuxCmd -username $testVMUsername -password $testVMPassword -ip $testVMVIP -port $testVMSSHport -command "mkdir -p $mountPoint" -runAsSudo 
 		$partitionNumber=1
@@ -5937,7 +6117,7 @@ Function PerformIOTestOnDisk($testVMObject, [string]$attachedDisk, [string]$disk
 			LogMsg "umount failed. Trying umount -l"
 			$out = RunLinuxCmd -username $testVMUsername -password $testVMPassword -ip $testVMVIP -port $testVMSSHport -command "umount -l $mountPoint" -runAsSudo 
 		}
-		$dmesgAfter = RunLinuxCmd -username $testVMUsername -password $testVMPassword -ip $testVMVIP -port $testVMSSHport -command "dmesg" -runAsSudo
+		$dmesgAfter = RunLinuxCmd -username $testVMUsername -password $testVMPassword -ip $testVMVIP -port $testVMSSHport -command "dmesg" -runMaxAllowedTime 30 -runAsSudo
 		$addedLines = $dmesgAfter.Replace($dmesgBefore,$null)
 		LogMsg "Kernel Logs : $($addedLines.Replace('[32m','').Replace('[0m[33m','').Replace('[0m',''))" -LinuxConsoleOuput
 		$retValue = "PASS"	
@@ -6925,4 +7105,20 @@ Function GetFilePathsFromLinuxFolder ([string]$folderToSearch, $IpAddress, $SSHP
 	}
 	return $LogFilesPaths, $LogFiles
 }
+
+function ZipFiles( $zipfilename, $sourcedir )
+{
+    $currentDir = (Get-Location).Path
+    $7z = (Get-ChildItem .\tools\7za.exe).FullName
+    $sourcedir = $sourcedir.Trim('\')
+    cd $sourcedir
+    $out = Invoke-Expression "$7z a -mx5 $currentDir\$zipfilename * -r"
+    cd $currentDir
+    if ($out -match "Everything is Ok")
+    {
+        Write-Host "$currentDir\$zipfilename created successfully."
+    }
+}
+
+
 #endregion

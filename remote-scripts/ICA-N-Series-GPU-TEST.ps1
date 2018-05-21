@@ -61,22 +61,23 @@ collect_VM_properties
             $restartStatus = RestartAllDeployments -allVMData $clientVMData
             if ($restartStatus -eq "True")
             {
-                if ($clientVMData.InstanceSize -eq "Standard_NC6")
+                if (($clientVMData.InstanceSize -eq "Standard_NC6") -or ($clientVMData.InstanceSize -eq "Standard_NC6s_v2") -or ($clientVMData.InstanceSize -eq "Standard_NV6")) 
                 {
                     $expectedCount = 1
                 }
-                elseif ($clientVMData.InstanceSize -eq "Standard_NC12")
+                elseif (($clientVMData.InstanceSize -eq "Standard_NC12") -or ($clientVMData.InstanceSize -eq "Standard_NC12s_v2") -or ($clientVMData.InstanceSize -eq "Standard_NV12"))
                 {
                     $expectedCount = 2
                 }
-                elseif ($clientVMData.InstanceSize -eq "Standard_NC24")
+                elseif (($clientVMData.InstanceSize -eq "Standard_NC24") -or ($clientVMData.InstanceSize -eq "Standard_NC24s_v2") -or ($clientVMData.InstanceSize -eq "Standard_NV24"))
                 {
                     $expectedCount = 4
                 }
-                elseif ($clientVMData.InstanceSize -eq "Standard_NC24r")
+                elseif (($clientVMData.InstanceSize -eq "Standard_NC24r") -or ($clientVMData.InstanceSize -eq "Standard_NC24rs_v2"))
                 {
                     $expectedCount = 4
-                }		
+                }	
+                LogMsg "Test VM Size: $($clientVMData.InstanceSize). Expected GPU Adapters : $expectedCount"	
                 $errorCount = 0
                 #Adding sleep of 180 seconds, giving time to load nvidia drivers.
                 LogMsg "Waiting 3 minutes. (giving time to load nvidia drivers)"
@@ -119,7 +120,7 @@ collect_VM_properties
                 #region PCI lshw -c video
                 $lshw = RunLinuxCmd -ip $clientVMData.PublicIP -port $clientVMData.SSHPort -username "root" -password $password -command "lshw -c video" -ignoreLinuxExitCode
                 Set-Content -Value $lshw -Path $LogDir\lshw-c-video.txt -Force
-                if ( (Select-String -Path $LogDir\lshw-c-video.txt -Pattern "NVIDIA Corporation").Matches.Count -eq $expectedCount )
+                if ( ((Select-String -Path $LogDir\lshw-c-video.txt -Pattern "product: NVIDIA Corporation").Matches.Count -eq $expectedCount) -or ((Select-String -Path $LogDir\lshw-c-video.txt -Pattern "vendor: NVIDIA Corporation").Matches.Count -eq $expectedCount) )
                 {
                     LogMsg "Expected Display adapters: $expectedCount. Observed adapters: $expectedCount"
                     $resultSummary +=  CreateResultSummary -testResult "PASS" -metaData "lshw -c video" -checkValues "PASS,FAIL,ABORTED" -testName $currentTestData.testName
@@ -137,9 +138,9 @@ collect_VM_properties
                 #region PCI nvidia-smi
                 $nvidiasmi = RunLinuxCmd -ip $clientVMData.PublicIP -port $clientVMData.SSHPort -username "root" -password $password -command "nvidia-smi" -ignoreLinuxExitCode
                 Set-Content -Value $nvidiasmi -Path $LogDir\nvidia-smi.txt -Force
-                if ( (Select-String -Path $LogDir\nvidia-smi.txt -Pattern "Tesla K80").Matches.Count -eq $expectedCount )
+                if ( (Select-String -Path $LogDir\nvidia-smi.txt -Pattern "Tesla ").Matches.Count -eq $expectedCount )
                 {
-                    LogMsg "Expected Tesla K80 count: $expectedCount. Observed count: $expectedCount"
+                    LogMsg "Expected Tesla count: $expectedCount. Observed count: $expectedCount"
                     $resultSummary +=  CreateResultSummary -testResult "PASS" -metaData "nvidia-smi" -checkValues "PASS,FAIL,ABORTED" -testName $currentTestData.testName
                 }
                 else

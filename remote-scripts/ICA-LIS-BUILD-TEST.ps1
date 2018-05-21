@@ -1,5 +1,5 @@
 ﻿# This script deploys the VMs for the LIS-BUILD functional test and trigger the test based on given TESTIDs.
-# 1. dos2unix, tar, , wge must be installed in the test image
+# 1. dos2unix, tar, , wget must be installed in the test image
 # 2. It requires the current & previous LIS builds at specified location mentioned in the test definition
 #
 # Author: Sivakanth Rebba
@@ -11,10 +11,18 @@
 Import-Module .\TestLibs\RDFELibs.psm1 -Force
 
 $Subtests = $currentTestData.SubtestValues
-$SubtestValues = $Subtests.Split(",") 
+$SubtestValues = $Subtests.Split(",")
 $LISVersion = ""
-$PreviousLISExtractCommand = $currentTestData.PreviousLISExtractCommand
-$CurrentLISExtractCommand = $currentTestData.CurrentLISExtractCommand
+if ($currentTestData.PreviousLISTarFile)
+{
+	LogMsg "Previous LIS : $($currentTestData.PreviousLISTarFile)"
+	$PreviousLISExtractCommand = "rm -rf *.tar*^wget $($currentTestData.PreviousLISTarFile)^tar -xzf $($currentTestData.PreviousLISTarFile | Split-Path -Leaf)^cp -ar LISISO/* . "
+}
+if ($currentTestData.CurrentLISTarFile)
+{
+	LogMsg "Current LIS : $($currentTestData.CurrentLISTarFile)"
+	$CurrentLISExtractCommand = "rm -rf *.tar*^wget $($currentTestData.CurrentLISTarFile)^tar -xzf $($currentTestData.CurrentLISTarFile | Split-Path -Leaf)^cp -ar LISISO/* . "
+}
 $LISExtractCommand = ""
 $result = ""
 $testResult = ""

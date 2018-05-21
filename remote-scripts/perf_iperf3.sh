@@ -43,11 +43,11 @@ touch ./IPERF3Test.log
 
 InstallIPERF3()
 {
-		DISTRO=`grep -ihs "buntu\|Suse\|Fedora\|Debian\|CentOS\|Red Hat Enterprise Linux" /etc/{issue,*release,*version}`
-		if [[ $DISTRO =~ "Ubuntu" ]];
+		DISTRO=`grep -ihs "buntu\|Suse\|Fedora\|Debian\|CentOS\|Red Hat Enterprise Linux\|clear-linux-os" /etc/{issue,*release,*version} /usr/lib/os-release`
+		if [[ $DISTRO =~ "Ubuntu" ]] || [[ $DISTRO =~ "Debian" ]];
 		then
 			
-			LogMsg "Detected Ubuntu"
+			LogMsg "Detected Ubuntu/Debian"
 			ssh ${1} "until dpkg --force-all --configure -a; sleep 10; do echo 'Trying again...'; done"
 			ssh ${1} "apt-get update"
 			ssh ${1} "apt-get -y install iperf3 sysstat bc psmisc"
@@ -69,7 +69,12 @@ InstallIPERF3()
 				ssh ${1} "rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm"
 				ssh ${1} "yum -y --nogpgcheck install iperf3 sysstat bc psmisc"
 				ssh ${1} "iptables -F"
-				
+		elif [[ $DISTRO =~ "clear-linux-os" ]];
+		then
+				LogMsg "Detected Clear Linux OS. Installing required packages"
+				ssh ${1} "swupd bundle-add dev-utils-dev sysadmin-basic performance-tools os-testsuite-phoronix network-basic openssh-server dev-utils os-core os-core-dev"
+				ssh ${1} "iptables -F"
+								
 		else
 				LogMsg "Unknown Distro"
 				UpdateTestState "TestAborted"

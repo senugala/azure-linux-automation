@@ -2,8 +2,8 @@
 # AzureAutomationManager.ps1
 # Description : This script manages all the setup and test operations in Azure environemnt.
 #               It is an entry script of Azure Automation
-# Operations : 
-#              - Installing AzureSDK 
+# Operations :
+#              - Installing AzureSDK
 #              - VHD preparation : Installing packages required by ICA, LIS drivers and waagent
 #              - Uplaoding test VHD to cloud
 #              - Invokes azure test suite
@@ -11,28 +11,36 @@
 ## Author : v-ampaw@microsoft.com
 ###############################################################################################
 param (
-[string] $xmlConfigFile, 
-[switch] $eMail, 
-[string] $logFilename="azure_ica.log", 
-[switch] $runtests, [switch]$onCloud, 
-[switch] $vhdprep, 
-[switch] $upload, 
-[switch] $help, 
-[string] $Distro, 
+[string] $xmlConfigFile,
+[switch] $eMail,
+[string] $logFilename="azure_ica.log",
+[switch] $runtests, [switch]$onCloud,
+[switch] $vhdprep,
+[switch] $upload,
+[switch] $help,
+[string] $Distro,
 [string] $cycleName,
 [string] $RunSelectedTests,
-[string] $TestPriority, 
-[string] $osImage, 
-[switch] $EconomyMode, 
-[switch] $keepReproInact, 
-[string] $DebugDistro, 
-[switch] $UseAzureResourceManager, 
+[string] $TestPriority,
+[string] $osImage,
+[switch] $EconomyMode,
+[switch] $keepReproInact,
+[string] $DebugDistro,
+[switch] $UseAzureResourceManager,
 [string] $OverrideVMSize,
 [switch] $EnableAcceleratedNetworking,
-[string] $customKernel, 
-[string] $customLIS, 
+[string] $customKernel,
+[string] $customLIS,
 [string] $customLISBranch,
-[string] $resizeVMsAfterDeployment
+[string] $resizeVMsAfterDeployment,
+[string] $ExistingResourceGroup,
+[switch] $CleanupExistingRG,
+[switch] $UseManagedDisks,
+[int] $coureCountExceededTimeout = 3600,
+[int] $testIterations = 1,
+[string] $tipSessionId="",
+[string] $tipCluster="",
+[switch] $ForceDeleteResources
 )
 
 Import-Module .\TestLibs\AzureWinUtils.psm1 -Force -Scope Global
@@ -54,13 +62,19 @@ Set-Variable -Name PublicConfiguration -Value @() -Scope Global
 Set-Variable -Name PrivateConfiguration -Value @() -Scope Global
 Set-Variable -Name CurrentTestData -Value $CurrentTestData -Scope Global
 Set-Variable -Name preserveKeyword -Value "preserving" -Scope Global
+Set-Variable -Name tipSessionId -Value $tipSessionId -Scope Global
+Set-Variable -Name tipCluster -Value $tipCluster -Scope Global
 
 Set-Variable -Name global4digitRandom -Value $(Get-Random -SetSeed $(Get-Random) -Maximum 9999 -Minimum 1111) -Scope Global
-
+Set-Variable -Name coureCountExceededTimeout -Value $coureCountExceededTimeout -Scope Global
 
 if($EnableAcceleratedNetworking)
 {
     Set-Variable -Name EnableAcceleratedNetworking -Value $true -Scope Global
+}
+if($ForceDeleteResources)
+{
+    Set-Variable -Name ForceDeleteResources -Value $true -Scope Global
 }
 if($resizeVMsAfterDeployment)
 {
@@ -87,6 +101,28 @@ if ( $RunSelectedTests )
 {
     Set-Variable -Name RunSelectedTests -Value $RunSelectedTests -Scope Global
 }
+if ($ExistingResourceGroup)
+{
+    Set-Variable -Name ExistingRG -Value $ExistingResourceGroup -Scope Global
+    LogMsg "1111111111111111111111"
+}
+if ($CleanupExistingRG)
+{
+    Set-Variable -Name CleanupExistingRG -Value $true -Scope Global
+}
+else
+{
+    Set-Variable -Name CleanupExistingRG -Value $false -Scope Global
+}
+if ($UseManagedDisks)
+{
+    Set-Variable -Name UseManagedDisks -Value $true -Scope Global
+}
+else 
+{
+    Set-Variable -Name UseManagedDisks -Value $false -Scope Global    
+}
+
 if ( $xmlConfig.config.Azure.General.StorageAccount -imatch "NewStorage_" )
 {
     $NewASMStorageAccountType = ($xmlConfig.config.Azure.General.StorageAccount).Replace("NewStorage_","")
@@ -98,14 +134,13 @@ if ( $xmlConfig.config.Azure.General.ARMStorageAccount -imatch "NewStorage_" )
     Set-Variable -Name NewARMStorageAccountType -Value $NewASMStorageAccountType -Scope Global
 }
 
-
 try
 {
     # Main Body of the script
     # Work flow starts here
     # Creating TestResults directory
     $testResults = "TestResults"
-    
+
     if (! (test-path $testResults))
     {
         mkdir $testResults | out-null
@@ -113,7 +148,7 @@ try
     if ($help)
     {
         Usage
-        Write-Host "Info : Help command was passed, not runTests." 
+        Write-Host "Info : Help command was passed, not runTests."
         exit 1
     }
     if (! $xmlConfigFile)
@@ -128,18 +163,13 @@ try
         exit 3
     }
 
-    #Parse XML file
-    #Get Parameters through XML file
-
-    $xmlConfig=[XML](Get-Content $xmlConfigFile)
     $Platform=$xmlConfig.config.global.platform
     $global=$xmlConfig.config.global
-	
+
     $testStartTime = [DateTime]::Now.ToUniversalTime()
     Set-Variable -Name testStartTime -Value $testStartTime -Scope Global
 
-    $fname = [System.IO.Path]::GetFilenameWithoutExtension($xmlConfigFile)
-    $testDir = $testResults + "\" + $fname + "-" + $testStartTime.ToString("yyyyMMdd-HHmmss") + "-$(Get-Random -Maximum 999 -Minimum 111)"
+    $testDir = $testResults + "\" + $cycleName + "-" + $testStartTime.ToString("yyyyMMddHHmmssff")
 
     mkdir $testDir -ErrorAction SilentlyContinue | out-null
     Set-Content -Value "" -Path .\report\testSummary.html -Force -ErrorAction SilentlyContinue | Out-Null
@@ -155,7 +185,7 @@ try
     Set-Content -Path .\report\lastLogDirectory.txt -Value $testDir -ErrorAction SilentlyContinue
     Set-Variable -Name Distro -Value $Distro -Scope Global
     Set-Variable -Name onCloud -Value $onCloud -Scope Global
-    Set-Variable -Name xmlConfig -Value $xmlConfig -Scope Global 
+    Set-Variable -Name xmlConfig -Value $xmlConfig -Scope Global
 	Set-Content -Path .\report\lastLogDirectory.txt -Value $testDir -ErrorAction SilentlyContinue
     Set-Variable -Name vnetIsAllConfigured -Value $false -Scope Global
     if($EconomyMode)
@@ -183,14 +213,34 @@ try
     LogMsg  ("Info : Created test results directory:", $testDir)
     LogMsg  ("Info : Logfile = ", $logfile)
     LogMsg  ("Info : Using config file $xmlConfigFile")
+    if ( ( $xmlConfig.config.Azure.General.ARMStorageAccount -imatch "ExistingStorage" ) -or ($xmlConfig.config.Azure.General.StorageAccount -imatch "ExistingStorage" ) )
+    {
+        $regionName = $xmlConfig.config.Azure.General.Location.Replace(" ","").Replace('"',"").ToLower()
+        $regionStorageMapping = [xml](Get-Content .\XML\RegionAndStorageAccounts.xml)
 
+        if ( $xmlConfig.config.Azure.General.ARMStorageAccount -imatch "standard")
+        {
+           $xmlConfig.config.Azure.General.ARMStorageAccount = $regionStorageMapping.AllRegions.$regionName.StandardStorage
+           $xmlConfig.config.Azure.General.StorageAccount = $regionStorageMapping.AllRegions.$regionName.StandardStorage
+           LogMsg "Info : Selecting existing standard storage account in $regionName - $($regionStorageMapping.AllRegions.$regionName.StandardStorage)"
+        }
+        if ( $xmlConfig.config.Azure.General.ARMStorageAccount -imatch "premium")
+        {
+           $xmlConfig.config.Azure.General.ARMStorageAccount = $regionStorageMapping.AllRegions.$regionName.PremiumStorage
+           $xmlConfig.config.Azure.General.StorageAccount = $regionStorageMapping.AllRegions.$regionName.PremiumStorage
+           LogMsg "Info : Selecting existing premium storage account in $regionName - $($regionStorageMapping.AllRegions.$regionName.PremiumStorage)"
+
+        }
+    }
     if ($UseAzureResourceManager)
     {
         Set-Variable -Name UseAzureResourceManager -Value $true -Scope Global
         $selectSubscription = Select-AzureRmSubscription -SubscriptionId $AzureSetup.SubscriptionID
+        $subIDSplitted = ($AzureSetup.SubscriptionID).Split("-")
+        $userIDSplitted = ($selectSubscription.Account.Id).Split("-")
         LogMsg "SubscriptionName       : $($AzureSetup.SubscriptionName)"
-        LogMsg "SubscriptionId         : $($selectSubscription.Subscription.SubscriptionId)"
-        LogMsg "User                   : $($selectSubscription.Account.Id)"
+        LogMsg "SubscriptionId         : $($subIDSplitted[0])-xxxx-xxxx-xxxx-$($subIDSplitted[4])"
+        LogMsg "User                   : $($userIDSplitted[0])-xxxx-xxxx-xxxx-$($userIDSplitted[4])"
         LogMsg "ServiceEndpoint        : $($selectSubscription.Environment.ActiveDirectoryServiceEndpointResourceId)"
         LogMsg "CurrentStorageAccount  : $($AzureSetup.ARMStorageAccount)"
     }
@@ -207,7 +257,7 @@ try
         LogMsg "ServiceEndpoint        : $($currentSubscription.ServiceEndpoint)"
         LogMsg "CurrentStorageAccount  : $($AzureSetup.StorageAccount)"
     }
-    
+
     #Check for the Azure platform
     if($Platform -eq "Azure")
     {
@@ -231,7 +281,7 @@ try
     }
     if ($vhdprep)
     {
-	    $sts=VHDProvision $xmlConfig $uploadflag 
+	    $sts=VHDProvision $xmlConfig $uploadflag
 	    if($sts -contains $false)
 	    {
 	        LogMsg  "Exiting with Error..!!!"
@@ -258,7 +308,7 @@ try
 	        ##To do
 	        #Ivoking ICA scripts on Hyper-V server
 	        #cd ...\Win8_ICA\ica
-	        #.\ica.ps1 .\XML\test.xml -runtests 
+	        #.\ica.ps1 .\XML\test.xml -runtests
 	        exit
         }
         if ($DebugDistro)
@@ -267,9 +317,9 @@ try
             Set-Variable -Name DebugOsImage -Value $OsImage -Scope Global
         }
         $testCycle =  GetCurrentCycleData -xmlConfig $xmlConfig -cycleName $cycleName
-        #Invoke Azure Test Suite  
+        #Invoke Azure Test Suite
 
-        $testSuiteResultDetails=.\AzureTestSuite.ps1 $xmlConfig -Distro $Distro -cycleName $cycleName
+        $testSuiteResultDetails=.\AzureTestSuite.ps1 $xmlConfig -Distro $Distro -cycleName $cycleName -testIterations $testIterations
         #if(!$sts)
         #{
             #exit
@@ -298,7 +348,7 @@ catch
     $script_name = ($_.InvocationInfo.ScriptName).Replace($PWD,".")
     $ErrorMessage =  $_.Exception.Message
     LogErr "EXCEPTION : $ErrorMessage"
-    LogErr "Source : Line $line in script $script_name."   
+    LogErr "Source : Line $line in script $script_name."
 }
 Finally
 {

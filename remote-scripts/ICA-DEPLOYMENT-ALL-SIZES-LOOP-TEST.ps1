@@ -1,4 +1,4 @@
-﻿<#-------------Create Deployment Start------------------#>
+<#-------------Create Deployment Start------------------#>
 Import-Module .\TestLibs\RDFELibs.psm1 -Force
 $result = ""
 $testResult = ""
@@ -17,24 +17,32 @@ else
 	if ( $UseAzureResourceManager )
 	{
 		$StorAccount = $xmlConfig.config.Azure.General.ARMStorageAccount
-        $saInfoCollected = $false
-        $retryCount = 0
-        $maxRetryCount = 999
-        while(!$saInfoCollected -and ($retryCount -lt $maxRetryCount))
-        {
-            try
-            {
-                $retryCount += 1
-                LogMsg "[Attempt $retryCount/$maxRetryCount] : Getting Existing Storage Account : $StorAccount details ..."
-                $GetAzureRMStorageAccount = Get-AzureRmStorageAccount
-                $saInfoCollected = $true
-            }
-            catch
-            {
-                LogErr "Error in fetching Storage Account info. Retrying."
-                sleep -Seconds 10
-            }
-        }
+
+		$saInfoCollected = $false
+		$retryCount = 0
+		$maxRetryCount = 999
+		while(!$saInfoCollected -and ($retryCount -lt $maxRetryCount))
+		{
+			try
+			{
+				$retryCount += 1
+				LogMsg "[Attempt $retryCount/$maxRetryCount] : Getting $StorAccount Storage Account details ..."
+				$GetAzureRmStorageAccount = $null
+				$GetAzureRmStorageAccount = Get-AzureRmStorageAccount
+				if ($GetAzureRmStorageAccount -eq $null)
+				{
+					throw
+				}
+				$saInfoCollected = $true
+			}
+			catch
+			{
+				$saInfoCollected = $false
+				LogErr "Error in fetching Storage Account info. Retrying in 10 seconds."
+				sleep -Seconds 10
+			}
+		}
+		
 		$AccountDetail =  $GetAzureRMStorageAccount | where {$_.StorageAccountName -eq $StorAccount}
 		$Location = $AccountDetail.PrimaryLocation
 		$AccountType = $AccountDetail.Sku.Tier.ToString()
@@ -46,7 +54,21 @@ else
 		$Location = (Get-AzureStorageAccount -StorageAccountName $StorAccount).GeoPrimaryLocation
 		$AccountType = (Get-AzureStorageAccount -StorageAccountName $StorAccount).AccountType
 		$SupportSizes = (Get-AzureLocation | where {$_.Name -eq $location}).VirtualMachineRoleSizes
-	}
+    }
+    if ($currentTestData.StandardVMSizes   -and $AccountType -match 'Standard' )
+    {
+        $targetVMSizes = ($currentTestData.StandardVMSizes).Split(",")
+    }
+    elseif ($currentTestData.PremiumVMSizes  -and $AccountType -match 'Premium')
+    {
+        $targetVMSizes = ($currentTestData.PremiumVMSizes).Split(",")
+    }
+    else 
+    {
+        $targetVMSizes = $SupportSizes
+    }
+    Write-Host "targetVMSizes = $targetVMSizes"
+    
 	foreach($size in $SupportSizes)
 	{
 		if ($size -imatch 'Promo')
@@ -55,13 +77,19 @@ else
 		}
 		else
 		{
-		    if(($size -match 'DS') -or ($size -match 'GS') -or ($size.Trim().EndsWith("s")))
+		    if(($size -match 'DS') -or ($size -match 'GS') -or ($size.Trim().EndsWith("s")) -or ($size.Contains("s_v")))
 		    {
-			$XioSizes += $size.Trim()
+                if ( $targetVMsizes.Contains("$size") )
+                {
+                    $XioSizes += $size.Trim()
+                }
 		    }
 		    else
 		    {
-			$StandardSizes += $size.Trim()
+                if ( $targetVMsizes.Contains("$size") )
+                {
+                    $StandardSizes += $size.Trim()
+                }
 		    }
 		}
 	}
