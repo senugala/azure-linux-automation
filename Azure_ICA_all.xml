@@ -6475,7 +6475,7 @@
 			<TestID></TestID>
 			<SubtestValues></SubtestValues>
 			<MountPoint>'/myazureshare'</MountPoint>
-			<AzureShareUrl>'//xsmbforcifs.file.core.windows.net/sirebbshare'</AzureShareUrl>
+			<AzureShareUrl>'//xsmbforcifs.file.core.windows.net/azureshare'</AzureShareUrl>
 			<Priority>P0</Priority>
 		</test>
 		
