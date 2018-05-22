@@ -5,8 +5,6 @@ $testResult = ""
 $resultArr = @()
 $AzureShare=$currentTestData.AzureShareUrl
 $AccessKey=(Get-AzureRmStorageAccountKey -ResourceGroupName $AzureShare.Split("//")[2].Split(".")[0] -Name $AzureShare.Split("//")[2].Split(".")[0]).value[0]
-
-
 $MountPoint=$currentTestData.MountPoint
 
 $isDeployed = DeployVMS -setupType $currentTestData.setupType -Distro $Distro -xmlConfig $xmlConfig
@@ -20,9 +18,9 @@ if ($isDeployed)
 		RemoteCopy -uploadTo $testVMData.PublicIP -port $testVMData.SSHPort -files ".\remote-scripts\azuremodules.py,.\remote-scripts\XSMB-XFS-TEST.py,.\remote-scripts\GetXsmbXfsTestStatus.sh" -username "root" -password $password -upload
 		RunLinuxCmd -ip $testVMData.PublicIP -port $testVMData.SSHPort -username "root" -password $password -command "chmod +x *.sh" -runAsSudo
 		RunLinuxCmd -ip $testVMData.PublicIP -port $testVMData.SSHPort -username "root" -password $password -command "mkdir $MountPoint" -runAsSudo
-		RunLinuxCmd -ip $testVMData.PublicIP -port $testVMData.SSHPort -username "root" -password $password -command "mount -t cifs $AzureShare $MountPoint -o vers=3.0,username=xsmbforcifs,password=$AccessKey,dir_mode=0777,file_mode=0777,sec=ntlmssp" -runAsSudo
 		LogMsg "Mounting Share on remote Machine"
-		#LogMsg "Executing : $($currentTestData.testScript)"
+		RunLinuxCmd -ip $testVMData.PublicIP -port $testVMData.SSHPort -username "root" -password $password -command "mount -t cifs $AzureShare $MountPoint -o vers=3.0,username=xsmbforcifs,password=$AccessKey,dir_mode=0777,file_mode=0777,sec=ntlmssp" -runAsSudo
+		LogMsg "Executing : $($currentTestData.testScript)"
 		$testJob=RunLinuxCmd -username root -password $password -ip $testVMData.PublicIP -port $testVMData.SSHPort -command "python $($currentTestData.testScript) -p $AccessKey -s $AzureShare -m $MountPoint > /root/test.txt" -runAsSudo -runmaxallowedtime 1000 -ignoreLinuxExitCode 
 		while ( (Get-Job -Id $testJob).State -eq "Running" )
 		{
@@ -77,8 +75,8 @@ if ($isDeployed)
 			$out=RunLinuxCmd -username root -password $password -ip $testVMData.PublicIP -port $testVMData.SSHPort -command "/bin/bash GetXsmbXfsTestStatus.sh" -runAsSudo -ignoreLinuxExitCode
 			LogMsg "Xfs Test Status : $out"
 		}
-		
-		RemoteCopy -download -downloadFrom $testVMData.PublicIP -files "xfstest.log,Summary.log,Runtime.log" -downloadTo $LogDir -port $testVMData.SSHPort -username root -password $password
+		#$out=RunLinuxCmd -username root -password $password -ip $testVMData.PublicIP -port $testVMData.SSHPort -command "tar -cvzf xfstestfull.tar.gz * " -runAsSudo
+		RemoteCopy -download -downloadFrom $testVMData.PublicIP -files "xfstest.log,Summary.log,Runtime.log,xfstestfull.tar.gz" -downloadTo $LogDir -port $testVMData.SSHPort -username root -password $password
 		LogMsg "Test result : $testResult"
 		$resultSummary +=  CreateResultSummary -testResult $testResult -metaData "" -checkValues "PASS,FAIL,ABORTED" -testName $currentTestData.testName
 	}
@@ -93,6 +91,7 @@ if ($isDeployed)
 		if (!$testResult)
 		{
 			$testResult = "Aborted"
+			
 		}
 		$resultArr += $testResult
 	}   
