@@ -71,13 +71,14 @@ InstallIPERF3()
 				ssh ${1} "iptables -F"
 		elif [[ $DISTRO =~ "SUSE Linux Enterprise Server 15" ]];
 		then
-			LogMsg "Detected SLES12"
-			LogMsg "Detected SLES12. Installing required packages"
-		    zypper addrepo https://download.opensuse.org/repositories/network:utilities/SLE_15/network:utilities.repo
-			zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys refresh
-			zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install sysstat
-			zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install grub2
-			zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install wget mdadm blktrace libaio1 iperf
+			LogMsg "Detected SLES15"
+			LogMsg "Detected SLES15. Installing required packages"
+		    ssh ${1} "zypper addrepo https://download.opensuse.org/repositories/network:utilities/SLE_15/network:utilities.repo"
+			ssh ${1} "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys refresh"
+			ssh ${1} "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install sysstat"
+			ssh ${1} "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install grub2"
+			ssh ${1} "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install iperf"
+			ssh ${1} "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install wget mdadm blktrace libaio1"
 			
 		elif [[ $DISTRO =~ "clear-linux-os" ]];
 		then
