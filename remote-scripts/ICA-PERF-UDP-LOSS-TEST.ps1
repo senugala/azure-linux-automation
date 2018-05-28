@@ -5,6 +5,7 @@ $resultArr = @()
 $isDeployed = DeployVMS -setupType $currentTestData.setupType -Distro $Distro -xmlConfig $xmlConfig
 if ($isDeployed)
 {
+	
 	try
 	{
 		$noClient = $true
@@ -43,8 +44,10 @@ if ($isDeployed)
 		#
 		# PROVISION VMS FOR LISA WILL ENABLE ROOT USER AND WILL MAKE ENABLE PASSWORDLESS AUTHENTICATION ACROSS ALL VMS IN SAME HOSTED SERVICE.
 		#
-		ProvisionVMsForLisa -allVMData $allVMData -installPackagesOnRoleNames "none"
-
+		#ProvisionVMsForLisa -allVMData $allVMData -installPackagesOnRoleNames "none"
+		RunLinuxCmd -ip $clientVMData.PublicIP -port $clientVMData.SSHPort -username "root" -password $password -command "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install net-tools-deprecated"
+		RunLinuxCmd -ip $clientVMData.PublicIP -port $clientVMData.SSHPort -username "root" -password $password -command "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install net-tools-deprecated"
+		
 		#endregion
 
 		if($EnableAcceleratedNetworking)

@@ -92,13 +92,8 @@ InstallFIO() {
 
 		elif [[ $DISTRO =~ "SUSE Linux Enterprise Server 12" ]];
 		then
-<<<<<<< HEAD
 			LogMsg "Detected SLES12"
-			zypper addrepo https://download.opensuse.org/repositories/benchmark/SLE_12_SP3_Backports/benchmark.repo
-=======
-			LogMsg "Detected SLES12. Installing required packages"
 			zypper addrepo http://download.opensuse.org/repositories/benchmark/SLE_12_SP3_Backports/benchmark.repo
->>>>>>> upstream/master
 			zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys refresh
 			zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys remove gettext-runtime-mini-0.19.2-1.103.x86_64
 			zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install sysstat

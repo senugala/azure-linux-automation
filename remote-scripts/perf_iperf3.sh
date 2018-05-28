@@ -69,11 +69,22 @@ InstallIPERF3()
 				ssh ${1} "rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm"
 				ssh ${1} "yum -y --nogpgcheck install iperf3 sysstat bc psmisc"
 				ssh ${1} "iptables -F"
+		elif [[ $DISTRO =~ "SUSE Linux Enterprise Server 15" ]];
+		then
+			LogMsg "Detected SLES12"
+			LogMsg "Detected SLES12. Installing required packages"
+		    zypper addrepo https://download.opensuse.org/repositories/network:utilities/SLE_15/network:utilities.repo
+			zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys refresh
+			zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install sysstat
+			zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install grub2
+			zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install wget mdadm blktrace libaio1 iperf
+			
 		elif [[ $DISTRO =~ "clear-linux-os" ]];
 		then
 				LogMsg "Detected Clear Linux OS. Installing required packages"
 				ssh ${1} "swupd bundle-add dev-utils-dev sysadmin-basic performance-tools os-testsuite-phoronix network-basic openssh-server dev-utils os-core os-core-dev"
 				ssh ${1} "iptables -F"
+				
 								
 		else
 				LogMsg "Unknown Distro"
