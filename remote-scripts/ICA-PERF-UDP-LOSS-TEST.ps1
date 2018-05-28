@@ -41,7 +41,8 @@ if ($isDeployed)
 		LogMsg "  Public IP : $($serverVMData.InternalIP)"
 		LogMsg "  SSH Port : $($serverVMData.SSHPort)"
 		RunLinuxCmd -ip $clientVMData.PublicIP -port $clientVMData.SSHPort -username "lisa" -password $password -command "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install net-tools-deprecated"  -runAsSudo
-		RunLinuxCmd -ip $clientVMData.PublicIP -port $clientVMData.SSHPort -username "lisa" -password $password -command "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install net-tools-deprecated"  -runAsSudo
+		WaitFor -seconds 10
+		RunLinuxCmd -ip $clientVMData.PublicIP -port $serverVMData.SSHPort -username "lisa" -password $password -command "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install net-tools-deprecated"  -runAsSudo
 		
 		#
 		# PROVISION VMS FOR LISA WILL ENABLE ROOT USER AND WILL MAKE ENABLE PASSWORDLESS AUTHENTICATION ACROSS ALL VMS IN SAME HOSTED SERVICE.
