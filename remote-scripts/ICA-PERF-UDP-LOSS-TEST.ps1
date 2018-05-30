@@ -40,9 +40,11 @@ if ($isDeployed)
 		LogMsg "  RoleName : $($serverVMData.RoleName)"
 		LogMsg "  Public IP : $($serverVMData.InternalIP)"
 		LogMsg "  SSH Port : $($serverVMData.SSHPort)"
-		RunLinuxCmd -ip $clientVMData.PublicIP -port $clientVMData.SSHPort -username "lisa" -password $password -command "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install net-tools-deprecated"  -runAsSudo
-		WaitFor -seconds 10
-		RunLinuxCmd -ip $clientVMData.PublicIP -port $serverVMData.SSHPort -username "lisa" -password $password -command "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install net-tools-deprecated"  -runAsSudo
+		
+		# $detectedDistro = DetectLinuxDistro -VIP $clientVMData.PublicIP -SSHport $clientVMData.SSHPort -testVMUser $user -testVMPassword $password
+		# RunLinuxCmd -ip $clientVMData.PublicIP -port $clientVMData.SSHPort -username "lisa" -password $password -command "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install net-tools-deprecated"  -runAsSudo
+		# WaitFor -seconds 10
+		# RunLinuxCmd -ip $clientVMData.PublicIP -port $serverVMData.SSHPort -username "lisa" -password $password -command "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install net-tools-deprecated"  -runAsSudo
 		
 		#
 		# PROVISION VMS FOR LISA WILL ENABLE ROOT USER AND WILL MAKE ENABLE PASSWORDLESS AUTHENTICATION ACROSS ALL VMS IN SAME HOSTED SERVICE.
@@ -57,9 +59,9 @@ if ($isDeployed)
 		{
 			$DataPath = "SRIOV"
             LogMsg "Getting SRIOV NIC Name."
-            $clientNicName = (RunLinuxCmd -ip $clientVMData.PublicIP -port $clientVMData.SSHPort -username "root" -password $password -command "route | grep '^default' | grep -o '[^ ]*$'").Trim()
+            $clientNicName = (RunLinuxCmd -ip $clientVMData.PublicIP -port $clientVMData.SSHPort -username "route | grep '^default' | grep -o '[^ ]*$' 2>&1 | ip route | grep default | tr ' ' '\n' | grep eth").Trim()
             LogMsg "CLIENT SRIOV NIC: $clientNicName"
-            $serverNicName = (RunLinuxCmd -ip $clientVMData.PublicIP -port $serverVMData.SSHPort -username "root" -password $password -command "route | grep '^default' | grep -o '[^ ]*$'").Trim()
+            $serverNicName = (RunLinuxCmd -ip $clientVMData.PublicIP -port $serverVMData.SSHPort -username "route | grep '^default' | grep -o '[^ ]*$' 2>&1 | ip route | grep default | tr ' ' '\n' | grep eth").Trim()
             LogMsg "SERVER SRIOV NIC: $serverNicName"
             if ( $serverNicName -eq $clientNicName)
             {
@@ -74,9 +76,9 @@ if ($isDeployed)
 		{
 			$DataPath = "Synthetic"
             LogMsg "Getting Active NIC Name."
-            $clientNicName = (RunLinuxCmd -ip $clientVMData.PublicIP -port $clientVMData.SSHPort -username "root" -password $password -command "route | grep '^default' | grep -o '[^ ]*$'").Trim()
+            $clientNicName = (RunLinuxCmd -ip $clientVMData.PublicIP -port $clientVMData.SSHPort -username "route | grep '^default' | grep -o '[^ ]*$' 2>&1 | ip route | grep default | tr ' ' '\n' | grep eth").Trim()
             LogMsg "CLIENT NIC: $clientNicName"
-            $serverNicName = (RunLinuxCmd -ip $clientVMData.PublicIP -port $serverVMData.SSHPort -username "root" -password $password -command "route | grep '^default' | grep -o '[^ ]*$'").Trim()
+            $serverNicName = (RunLinuxCmd -ip $clientVMData.PublicIP -port $serverVMData.SSHPort -username "route | grep '^default' | grep -o '[^ ]*$' 2>&1 | ip route | grep default | tr ' ' '\n' | grep eth").Trim()
             LogMsg "SERVER NIC: $serverNicName"
             if ( $serverNicName -eq $clientNicName)
             {

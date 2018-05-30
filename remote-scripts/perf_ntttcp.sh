@@ -127,6 +127,8 @@ InstallNTTTCP() {
                 elif [[ $DISTRO =~ "SUSE Linux Enterprise Server 12" ]];
                 then
                 LogMsg "Detected SLES12"
+								ssh ${1} "zypper addrepo https://download.opensuse.org/repositories/benchmark/SLE_12_SP3_Backports/benchmark.repo"
+								ssh ${1} "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys refresh"
                                 ssh ${1} "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys remove gettext-runtime-mini*"
                                 ssh ${1} "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install sysstat git bc make gcc grub2 dstat psmisc"
                                 ssh ${1} "git clone https://github.com/Microsoft/ntttcp-for-linux.git"
@@ -137,6 +139,24 @@ InstallNTTTCP() {
                                 ssh ${1} "git clone https://github.com/Microsoft/lagscope"
                                 ssh ${1} "cd lagscope/src && make && make install"
                                 ssh ${1} "iptables -F"
+				
+				elif [[ $DISTRO =~ "SUSE Linux Enterprise Server 15" ]];
+				then
+								LogMsg "Detected SLES15"
+								LogMsg "Detected SLES15. Installing required packages"
+								ssh ${1} "zypper addrepo https://download.opensuse.org/repositories/network:utilities/SLE_15/network:utilities.repo"
+								ssh ${1} "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys refresh"
+								ssh ${1} "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install sysstat grub2 bc"
+								ssh ${1} "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install wget make git gcc dstat psmisc"
+								ssh ${1} "cd ntttcp-for-linux/ && git checkout 7a5017b00a603cfaf2ae2a83a6d6b688b2f9dbaa"
+                                ssh ${1} "cd ntttcp-for-linux/src/ && make && make install"
+                                ssh ${1} "cp ntttcp-for-linux/src/ntttcp ."
+                                ssh ${1} "rm -rf lagscope"
+                                ssh ${1} "git clone https://github.com/Microsoft/lagscope"
+                                ssh ${1} "cd lagscope/src && make && make install"
+                                ssh ${1} "iptables -F" 
+									
+				
 		elif [[ $DISTRO =~ "clear-linux-os" ]];
 		then
 				LogMsg "Detected Clear Linux OS. Installing required packages"
