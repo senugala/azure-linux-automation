@@ -41,13 +41,16 @@ if ($isDeployed)
 		LogMsg "  Public IP : $($serverVMData.PublicIP)"
 		LogMsg "  SSH Port : $($serverVMData.SSHPort)"
 		
-		$detectedDistro = DetectLinuxDistro -VIP $clientVMData.PublicIP -port $clientVMData.SSHPort -username "$user" -password $password
-		if(detectedDistro -imatch "SLES")
+		$detectedDistro = DetectLinuxDistro -$clientVMData.PublicIP -SSHport $clientVMData.SSHPort -testVMUser $user -testVMPassword $password
+		if( $detectedDistro -imatch "SLES" )
 		{
-		RunLinuxCmd -ip $clientVMData.PublicIP -port $clientVMData.SSHPort -username "$user" -password $password -command "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install net-tools-deprecated"  -runAsSudo
-		WaitFor -seconds 10
-		RunLinuxCmd -ip $clientVMData.PublicIP -port $serverVMData.SSHPort -username "$user" -password $password -command "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install net-tools-deprecated"  -runAsSudo
-		}
+			LogMsg " installing Packages"
+			RunLinuxCmd -ip $clientVMData.PublicIP -port $clientVMData.SSHPort -username "$user" -password $password -command "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install net-tools-deprecated"  -runAsSudo
+			WaitFor -seconds 10
+			RunLinuxCmd -ip $clientVMData.PublicIP -port $serverVMData.SSHPort -username "$user" -password $password -command "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install net-tools-deprecated"  -runAsSudo
+			WaitFor -seconds 10
+		}	
+		
 		#
 		# PROVISION VMS FOR LISA WILL ENABLE ROOT USER AND WILL MAKE ENABLE PASSWORDLESS AUTHENTICATION ACROSS ALL VMS IN SAME HOSTED SERVICE.	
 		#
