@@ -69,6 +69,16 @@ InstallIPERF3()
 				ssh ${1} "rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm"
 				ssh ${1} "yum -y --nogpgcheck install iperf3 sysstat bc psmisc"
 				ssh ${1} "iptables -F"
+		elif [[ $DISTRO =~ "SUSE Linux Enterprise Server 12" ]];
+                then
+                LogMsg "Detected SLES12"
+			    ssh ${1} "zypper addrepo https://download.opensuse.org/repositories/benchmark/SLE_12_SP3_Backports/benchmark.repo"
+				ssh ${1} "zypper addrepo https://download.opensuse.org/repositories/network:utilities/SLE_12_SP3/network:utilities.repo"
+				ssh ${1} "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys refresh"
+                ssh ${1} "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys remove gettext-runtime-mini*"
+				ssh ${1} "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys iperf"
+                ssh ${1} "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install sysstat git bc make gcc grub2 dstat psmisc"
+                ssh ${1} "iptables -F"
 		elif [[ $DISTRO =~ "SUSE Linux Enterprise Server 15" ]];
 		then
 			LogMsg "Detected SLES15"
