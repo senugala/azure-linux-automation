@@ -38,7 +38,7 @@ CONSTANTS_FILE="./constants.sh"
 ICA_TESTRUNNING="TestRunning"           # The test is running
 ICA_TESTCOMPLETED="TestCompleted"       # The test completed successfully
 ICA_TESTABORTED="TestAborted"           # Error during the setup of the test
-ICA_TESTFAILED="TestFailed"                     # Error occurred during the test
+ICA_TESTFAILED="TestFailed"             # Error occurred during the test
 touch ./ntttcpTest.log
 
 
@@ -143,7 +143,7 @@ InstallNTTTCP() {
 				elif [[ $DISTRO =~ "SUSE Linux Enterprise Server 15" ]];
 				then
 								LogMsg "Detected SLES15"
-								LogMsg "Detected SLES15. Installing required packages"
+								LogMsg "Detected SLES15 Installing required packages"
 								ssh ${1} "zypper addrepo https://download.opensuse.org/repositories/network:utilities/SLE_15/network:utilities.repo"
 								ssh ${1} "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys refresh"
 								ssh ${1} "zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install sysstat grub2 bc"

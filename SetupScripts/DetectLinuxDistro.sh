@@ -61,7 +61,10 @@ done
                 fi
         elif [ -e /etc/os-release ]; then
                 tmp=`cat /etc/os-release`
-                if [[ "$tmp" == *coreos* ]]; then
+				if [[ "$tmp" == *SLES* ]]; then
+                    echo "SLES"
+                    exitVal=0
+                elif [[ "$tmp" == *coreos* ]]; then
                     echo "COREOS"
                     exitVal=0
                 fi
