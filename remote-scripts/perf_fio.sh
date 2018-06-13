@@ -108,7 +108,9 @@ InstallFIO() {
 			zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys remove gettext-runtime-mini-0.19.2-1.103.x86_64
 			zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install sysstat
 			zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install grub2
-			zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install wget mdadm blktrace libaio1 fio
+			zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install wget mdadm blktrace libaio1
+			wget http://mirror.linux-ia64.org/opensuse/repositories/home:/roolebo:/branches:/benchmark/SLE_15/x86_64/fio-3.4-1.2.x86_64.rpm
+			zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install fio-3.4-1.2.x86_64.rpm
 		
 		
 		elif [[ $DISTRO =~ "clear-linux-os" ]];
