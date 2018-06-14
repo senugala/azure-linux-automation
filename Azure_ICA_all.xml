@@ -7475,7 +7475,7 @@
 			<files>.\remote-scripts\azuremodules.sh</files>
 			<TestParameters>
 				<param>testDuration=300</param>
-				<param>testConnections="1 2 4 8 16 32 64 128 256 512 1024 2048 4096 6144 8192 10240"</param>
+				<param>testConnections="1 1024 2048 4096 6144 8192 10240"</param>
 			</TestParameters>
 			<Priority>P0</Priority>
 		</test>
@@ -7489,7 +7489,7 @@
 			<files>.\remote-scripts\azuremodules.sh</files>
 			<TestParameters>
 				<param>testDuration=300</param>
-				<param>testConnections="1 2 4 8 16 32 64 128 256 512 1024 2048 4096 6144 8192 10240"</param>
+				<param>testConnections="1 1024 2048 4096 6144 8192 10240"</param>
 			</TestParameters>
 			<Priority>P0</Priority>
 			<AdditionalCustomization>
@@ -7506,7 +7506,7 @@
 			<files>.\remote-scripts\azuremodules.sh</files>
 			<TestParameters>
 				<param>testDuration=300</param>
-				<param>testConnections="1 2 4 8 16 32 64 128 256 512 1024 2048 4096 6144 8192 10240"</param>
+				<param>testConnections="1 1024 2048 4096 6144 8192 10240"</param>
 			</TestParameters>
 			<Priority>P0</Priority>
 		</test>
