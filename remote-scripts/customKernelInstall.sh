@@ -170,6 +170,7 @@ InstallKernel()
                         UpdateTestState $ICA_TESTFAILED
                 else
                         LogMsg "CUSTOM_KERNEL_SUCCESS"
+                        DEBIAN_FRONTEND=noninteractive apt-get -y remove linux-image-$(uname -r)
                         UpdateTestState $ICA_TESTCOMPLETED
                 fi
         elif [[ $customKernel == *.rpm ]]; then
@@ -182,13 +183,13 @@ InstallKernel()
                         LogMsg "Installing ${customKernel##*/}"
                         rpm -ivh "${customKernel##*/}"  >> $logFolder/build-customKernel.txt 2>&1
                         kernelInstallStatus=$?
-                        rpm -e kernel-$(uname -r)
+                        
                 else
                         prefix="localfile:"
                         LogMsg "Installing ${customKernel#$prefix}"
                         rpm -ivh "${customKernel#$prefix}"  >> $logFolder/build-customKernel.txt 2>&1
                         kernelInstallStatus=$?
-                        rpm -e kernel-$(uname -r)
+
                 fi
                 UpdateTestState $ICA_TESTCOMPLETED
                 if [ $kernelInstallStatus -ne 0 ]; then
@@ -197,6 +198,7 @@ InstallKernel()
                 else
                         LogMsg "CUSTOM_KERNEL_SUCCESS"
                         UpdateTestState $ICA_TESTCOMPLETED
+                        rpm -e kernel-$(uname -r)
                         grub2-set-default 0
                 fi
         fi

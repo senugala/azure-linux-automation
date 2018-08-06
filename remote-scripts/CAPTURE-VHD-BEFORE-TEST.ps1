@@ -24,8 +24,10 @@ if ($isDeployed)
 		LogMsg "Deprovisioning done."
         #endregion
         LogMsg "Shutting down VM.."
+        LogMsg "Shutting down VM.."
         $stopVM = Stop-AzureRmVM -Name $clientVMData.RoleName -ResourceGroupName $clientVMData.ResourceGroupName -Force -Verbose
-        if ($stopVM.Status -eq "Succeeded")
+        $stopVM = $true
+        if ($stopVM)
         {
             LogMsg "Shutdown successful."
             #Copy the OS VHD with different name.

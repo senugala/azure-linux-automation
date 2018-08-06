@@ -2948,7 +2948,7 @@
 					</VirtualMachine>
 				</HostedService>
 			</A11>
-			<Trim-OP0>
+			<TrimNone>
 				<isDeployed>NO</isDeployed>
 				<HostedService>
 					<VirtualMachine>
@@ -2968,8 +2968,8 @@
 						</DataDisk>
 					</VirtualMachine>
 				</HostedService>
-			</Trim-OP0>
-			<Trim-OP1>
+			</TrimNone>
+			<TrimRO>
 				<isDeployed>NO</isDeployed>
 				<HostedService>
 					<VirtualMachine>
@@ -2989,8 +2989,8 @@
 						</DataDisk>
 					</VirtualMachine>
 				</HostedService>
-			</Trim-OP1>
-			<Trim-OP2>
+			</TrimRO>
+			<TrimRW>
 				<isDeployed>NO</isDeployed>
 				<HostedService>
 					<VirtualMachine>
@@ -3010,7 +3010,7 @@
 						</DataDisk>
 					</VirtualMachine>
 				</HostedService>
-			</Trim-OP2>			
+			</TrimRW>			
 			<DS2DISK2>
 				<isDeployed>NO</isDeployed>
 				<HostedService>
@@ -7671,7 +7671,46 @@
 			</TestParameters>
 			<Priority>P0</Priority>
 		</test>		
-		
+		<test>
+			<testName>ICA-PERF-DISKSPD-IO-TEST-4K</testName>
+			<testScript></testScript>
+			<testScriptps1>ICA-PERF-DISKSPD-IO-TEST.ps1</testScriptps1>
+			<setupType>DS14DISK12</setupType>
+			<SupportedExecutionModes>AzureServiceManagement,AzureResourceManager</SupportedExecutionModes>
+			<SubtestValues>SOME,TEXTS,NEEDS,TO,BE,PRESENT,HERE,FOR,PRINTING,TEST,SUMMARY</SubtestValues>
+			<files>.\remote-scripts\azuremodules.sh</files>
+			<TestParameters>
+				<param>modes='randread randwrite read write'</param>
+				<param>startThread=1</param>
+				<param>maxThread=1024</param>
+				<param>startIO=4</param>
+				<param>numjobs=1</param>
+				<param>ioruntime=300</param>
+				<param>maxIO=4</param>
+				<param>fileSize=1023G</param>
+			</TestParameters>
+			<Priority>P0</Priority>
+		</test>
+		<test>
+			<testName>ICA-PERF-DISKSPD-IO-TEST-1024K</testName>
+			<testScript></testScript>
+			<testScriptps1>ICA-PERF-DISKSPD-IO-TEST.ps1</testScriptps1>
+			<setupType>DS14DISK12</setupType>
+			<SupportedExecutionModes>AzureServiceManagement,AzureResourceManager</SupportedExecutionModes>
+			<SubtestValues>SOME,TEXTS,NEEDS,TO,BE,PRESENT,HERE,FOR,PRINTING,TEST,SUMMARY</SubtestValues>
+			<files>.\remote-scripts\azuremodules.sh</files>
+			<TestParameters>
+				<param>modes='randread randwrite read write'</param>
+				<param>startThread=1</param>
+				<param>maxThread=1024</param>
+				<param>startIO=1024</param>
+				<param>numjobs=1</param>
+				<param>ioruntime=300</param>
+				<param>maxIO=1024</param>
+				<param>fileSize=1023G</param>
+			</TestParameters>
+			<Priority>P0</Priority>
+		</test>
 		<test>
 			<testName>ICA-PERF-UDP-LOSS-TEST</testName>
 			<testScript></testScript>
@@ -7729,8 +7768,6 @@
 			</TestParameters>
 			<Priority>P0</Priority>
 		</test>		
-
-
 
 		<test>
 			<testName>ICA-IPERF3-TCP-IPV6-TEST</testName>
@@ -7875,7 +7912,16 @@
 				<param>redis_test_suites="get,set"</param>
 			</TestParameters>
 			<Priority>P0</Priority>
-		</test>			
+		</test>
+		<test>
+			<testName>ICA-PERF-SYSCALL-BENCHMARK-TEST</testName>
+			<testScript></testScript>
+			<testScriptps1>ICA-PERF-SYSCALL-BENCHMARK-TEST.ps1</testScriptps1>
+			<setupType>SingleVM</setupType>
+			<SupportedExecutionModes>AzureServiceManagement,AzureResourceManager</SupportedExecutionModes>
+			<SubtestValues>SOME,TEXTS,NEEDS,TO,BE,PRESENT,HERE,FOR,PRINTING,TEST,SUMMARY</SubtestValues>
+			<Priority>P0</Priority>
+		</test>		
 		<test>
 			<testName>ICA-BUILD-LINUX-NEXT-DEB-PACKAGE</testName>
 			<testScript>build_deb_from_linux_next.sh</testScript>
@@ -8230,10 +8276,10 @@
 		</test>
 		<!-- TRIM Test Definations -->
 		<test>
-			<testName>ICA-TRIM-OPTION-0-TEST</testName>
+			<testName>ICA-TRIM-DISK-NONE-CACHE-TEST</testName>
 			<testScript></testScript>
 			<testScriptps1>ICA-TRIM-TEST.ps1</testScriptps1>
-			<setupType>Trim-OP0</setupType>
+			<setupType>TrimNone</setupType>
 			<diskType>None</diskType>
 			<files>.\remote-scripts\auto_rdos_XStoreTrim_setup.sh,.\remote-scripts\auto_rdos_XStoreTrim.sh,.\remote-scripts\auto_rdos_XStoreTrimFinal.sh</files>
 			<SupportedExecutionModes>AzureServiceManagement,AzureResourceManager</SupportedExecutionModes>
@@ -8244,10 +8290,10 @@
 			<Priority>P0</Priority>
 		</test>	
 		<test>
-			<testName>ICA-TRIM-OPTION-1-TEST</testName>
+			<testName>ICA-TRIM-DISK-READONLY-CACHE-TEST</testName>
 			<testScript></testScript>
 			<testScriptps1>ICA-TRIM-TEST.ps1</testScriptps1>
-			<setupType>Trim-OP1</setupType>
+			<setupType>TrimRO</setupType>
 			<diskType>ReadOnly</diskType>
 			<files>.\remote-scripts\auto_rdos_XStoreTrim_setup.sh,.\remote-scripts\auto_rdos_XStoreTrim.sh,.\remote-scripts\auto_rdos_XStoreTrimFinal.sh</files>
 			<SupportedExecutionModes>AzureServiceManagement,AzureResourceManager</SupportedExecutionModes>
@@ -8258,10 +8304,10 @@
 			<Priority>P0</Priority>
 		</test>	
 		<test>
-			<testName>ICA-TRIM-OPTION-2-TEST</testName>
+			<testName>ICA-TRIM-DISK-READWRITE-CACHE-TEST</testName>
 			<testScript></testScript>
 			<testScriptps1>ICA-TRIM-TEST.ps1</testScriptps1>
-			<setupType>Trim-OP2</setupType>
+			<setupType>TrimRW</setupType>
 			<diskType>ReadWrite</diskType>
 			<files>.\remote-scripts\auto_rdos_XStoreTrim_setup.sh,.\remote-scripts\auto_rdos_XStoreTrim.sh,.\remote-scripts\auto_rdos_XStoreTrimFinal.sh</files>
 			<SupportedExecutionModes>AzureServiceManagement,AzureResourceManager</SupportedExecutionModes>
@@ -9309,6 +9355,21 @@
 			</test>			
 		</Cycle>
 		<Cycle>
+			<cycleName>PERF-DISKSPD</cycleName>
+			<test>
+				<Name>ICA-PERF-DISKSPD-IO-TEST-4K</Name>
+			</test>
+			<test>
+				<Name>ICA-PERF-DISKSPD-IO-TEST-1024K</Name>
+			</test>
+		</Cycle>
+		<Cycle>
+			<cycleName>PERF-SYSCALL</cycleName>
+			<test>
+				<Name>ICA-PERF-SYSCALL-BENCHMARK-TEST</Name>
+			</test>
+		</Cycle>
+		<Cycle>
 			<cycleName>LINUX-NEXT-DEB</cycleName>
 			<test>
 				<Name>ICA-BUILD-LINUX-NEXT-DEB-PACKAGE</Name>
@@ -9408,13 +9469,13 @@
 		<Cycle>
 			<cycleName>TRIM</cycleName>
 			<test>
-				<Name>ICA-TRIM-OPTION-0-TEST</Name>
+				<Name>ICA-TRIM-DISK-NONE-CACHE-TEST</Name>
 			</test>
 			<test>
-				<Name>ICA-TRIM-OPTION-1-TEST</Name>
+				<Name>ICA-TRIM-DISK-READONLY-CACHE-TEST</Name>
 			</test>
 			<test>
-				<Name>ICA-TRIM-OPTION-2-TEST</Name>
+				<Name>ICA-TRIM-DISK-READWRITE-CACHE-TEST</Name>
 			</test>
 		</Cycle>			
 		<Cycle>
